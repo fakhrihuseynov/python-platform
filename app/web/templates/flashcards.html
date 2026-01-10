@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Flashcards Review</h2>
+{% if cards %}
+  {% for c in cards %}
+    <div class="card">
+      <p><strong>{{ c.front }}</strong></p>
+      <details><summary>Show Answer</summary><p>{{ c.back }}</p></details>
+      <form method="post" style="margin-top:8px;">
+        <input type="hidden" name="card_id" value="{{ c.id }}">
+        <label>Grade:
+          <select name="grade">
+            <option value="1">1 (again)</option>
+            <option value="2">2</option>
+            <option value="3">3 (good)</option>
+            <option value="4">4</option>
+            <option value="5">5 (easy)</option>
+          </select>
+        </label>
+        <button type="submit">Save</button>
+      </form>
+    </div>
+  {% endfor %}
+{% else %}
+  <p>No cards due. Great job!</p>
+{% endif %}
+{% endblock %}

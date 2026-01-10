@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Micro-lessons</h2>
+<ul>
+  {% for l in lessons %}
+    <li><strong>{{ l.id }}</strong> — {{ l.title }}<br><pre>{{ l.example }}</pre></li>
+  {% endfor %}
+</ul>
+{% endblock %}

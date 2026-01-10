@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Coach (Ollama - Mistral)</h2>
+<form method="post">
+  <textarea name="prompt" rows="6" style="width:100%">{{ prompt }}</textarea>
+  <button type="submit">Ask</button>
+</form>
+{% if reply %}
+  <h3>Reply</h3>
+  <pre>{{ reply }}</pre>
+{% endif %}
+{% endblock %}

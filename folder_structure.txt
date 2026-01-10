@@ -1,0 +1,46 @@
+
+pycoach-web/
+├─ app/
+│  └─ web/
+│     ├─ __init__.py
+│     ├─ main.py                  # Flask app factory & route registration
+│     ├─ routes/
+│     │  ├─ home.py
+│     │  ├─ learn.py              # micro-lessons pages
+│     │  ├─ practice.py           # exercises & self-checks
+│     │  ├─ flashcards.py         # review UI (SRS)
+│     │  └─ coach.py              # AI Q&A via Ollama HTTP API
+│     ├─ templates/
+│     │  ├─ base.html
+│     │  ├─ home.html
+│     │  ├─ learn.html
+│     │  ├─ practice.html
+│     │  ├─ flashcards.html
+│     │  └─ coach.html
+│     └─ static/
+│        ├─ css/
+│        │  └─ main.css
+│        ├─ js/
+│        │  └─ app.js
+│        └─ img/
+├─ core/
+│  ├─ lessons.py                  # registry of micro-lessons
+│  ├─ practice.py                 # assert-based checking utilities
+│  ├─ flashcards.py               # card CRUD + SRS scheduling
+│  ├─ srs.py                      # SM-2 lite algorithm
+│  ├─ coach.py                    # Ollama adapter (requests-based)
+│  ├─ log.py                      # append to learning_log.yml
+│  └─ storage.py                  # paths, YAML/JSONL helpers
+├─ data/
+│  ├─ learning_log.yml
+│  ├─ cards.jsonl
+│  └─ progress.json
+├─ tests/
+│  └─ test_flashcards.py
+├─ scripts/
+│  └─ seed_cards.py               # optional seeding script
+├─ .env.example                   # ENGINE, OLLAMA_URL, OLLAMA_MODEL
+├─ requirements.txt
+├─ README.md
+└─ LICENSE
+``
