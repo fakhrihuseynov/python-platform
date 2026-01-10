@@ -1,6 +1,492 @@
+/* Professional PyCoach Design - Light & Dark Modes */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Arial, sans-serif; margin:0; }
-.nav { background:#0d47a1; padding:10px; }
-.nav a { color:#fff; margin-right:12px; text-decoration:none; }
-.container { padding:16px; }
-.card { border:1px solid #ddd; padding:12px; margin:8px 0; border-radius:6px; }
+:root {
+  /* Light Mode Colors */
+  --primary: #0969da;
+  --primary-hover: #0550ae;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f6f8fa;
+  --bg-tertiary: #eaeef2;
+  --text-primary: #1f2328;
+  --text-secondary: #636c76;
+  --text-muted: #8c959f;
+  --border: #d1d9e0;
+  --border-strong: #8c959f;
+  --success: #1a7f37;
+  --success-bg: #dafbe1;
+  --error: #d1242f;
+  --error-bg: #ffebe9;
+  --warning: #bf8700;
+  --warning-bg: #fff8c5;
+  --shadow: rgba(31, 35, 40, 0.12);
+  --shadow-hover: rgba(31, 35, 40, 0.2);
+}
+
+[data-theme="dark"] {
+  /* Dark Mode Colors - GitHub Style */
+  --primary: #58a6ff;
+  --primary-hover: #79c0ff;
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --text-primary: #e6edf3;
+  --text-secondary: #8d96a0;
+  --text-muted: #656d76;
+  --border: #30363d;
+  --border-strong: #6e7681;
+  --success: #3fb950;
+  --success-bg: #1b4721;
+  --error: #f85149;
+  --error-bg: #4c1f1f;
+  --warning: #d29922;
+  --warning-bg: #4a3b1a;
+  --shadow: rgba(0, 0, 0, 0.3);
+  --shadow-hover: rgba(0, 0, 0, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-secondary);
+  min-height: 100vh;
+  color: var(--text-primary);
+  line-height: 1.6;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Navigation */
+.nav {
+  background: var(--bg-primary);
+  padding: 1.5rem 3rem;
+  box-shadow: 0 1px 0 var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-links {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.nav a {
+  color: var(--text-primary);
+  text-decoration: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 6px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  font-weight: 500;
+  font-size: 0.95rem;
+  display: inline-block;
+}
+
+.nav a:hover {
+  background: var(--bg-tertiary);
+  color: var(--primary);
+}
+
+.nav a.active {
+  background: var(--bg-tertiary);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Theme Toggle */
+.theme-toggle {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-strong);
+}
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+
+/* Headings */
+h1, h2, h3 {
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+h1 { 
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+h2 { 
+  font-size: 1.875rem;
+  margin-bottom: 0.5rem;
+}
+
+h3 {
+  font-size: 1.25rem;
+}
+
+h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 1rem 0 0.5rem;
+}
+
+/* Cards */
+.card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  box-shadow: 0 1px 3px var(--shadow);
+  transition: all 0.15s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px var(--shadow-hover);
+  border-color: var(--border-strong);
+}
+
+/* Lesson Cards */
+.lesson-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.5rem;
+  margin: 1.25rem 0;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.lesson-card:hover {
+  box-shadow: 0 4px 12px var(--shadow-hover);
+  border-color: var(--primary);
+}
+
+.lesson-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lesson-id {
+  background: var(--primary);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.lesson-challenge {
+  background: var(--warning-bg);
+  border-left: 3px solid var(--warning);
+  padding: 1rem;
+  margin-top: 1rem;
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+
+.lesson-challenge strong {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+/* Code blocks */
+pre {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  margin: 1rem 0;
+}
+
+code {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 0.875em;
+  background: var(--bg-tertiary);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+/* Forms */
+form {
+  background: var(--bg-primary);
+  padding: 1.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+textarea, input[type="text"] {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  transition: all 0.15s ease;
+  resize: vertical;
+}
+
+textarea:focus, input[type="text"]:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.12);
+}
+
+textarea {
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.6;
+}
+
+/* Buttons */
+button, .btn {
+  background: var(--primary);
+  color: white;
+  border: 1px solid transparent;
+  padding: 0.625rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-top: 1rem;
+  font-family: 'Inter', sans-serif;
+}
+
+button:hover, .btn:hover {
+  background: var(--primary-hover);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-strong);
+}
+
+/* Select */
+select {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.625rem 0.75rem;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.12);
+}
+
+/* Labels */
+label {
+  display: block;
+  margin: 1rem 0 0.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+/* Flashcard specific */
+.flashcard {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.5rem;
+  margin: 1.25rem 0;
+  box-shadow: 0 1px 3px var(--shadow);
+  transition: all 0.15s ease;
+}
+
+.flashcard:hover {
+  box-shadow: 0 4px 12px var(--shadow-hover);
+  border-color: var(--primary);
+}
+
+.flashcard strong {
+  color: var(--text-primary);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+details {
+  margin: 1rem 0;
+}
+
+summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 600;
+  padding: 0.75rem;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+}
+
+summary:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-strong);
+}
+
+/* Home page */
+.welcome-box {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3rem;
+  text-align: center;
+  box-shadow: 0 1px 3px var(--shadow);
+  margin-bottom: 2rem;
+}
+
+.welcome-box h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: var(--primary);
+}
+
+.welcome-box p {
+  font-size: 1.125rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+/* Success/Error messages */
+.success {
+  background: var(--success-bg);
+  border: 1px solid var(--success);
+  border-left: 3px solid var(--success);
+  color: var(--success);
+  padding: 1rem;
+  border-radius: 6px;
+  margin: 1rem 0;
+  font-weight: 500;
+}
+
+.error {
+  background: var(--error-bg);
+  border: 1px solid var(--error);
+  border-left: 3px solid var(--error);
+  color: var(--error);
+  padding: 1rem;
+  border-radius: 6px;
+  margin: 1rem 0;
+  white-space: pre-wrap;
+  font-weight: 500;
+}
+
+.info {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  color: var(--text-primary);
+  padding: 1rem;
+  border-radius: 6px;
+  margin: 1rem 0;
+}
+
+/* Lists */
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  margin: 0.5rem 0;
+}
+
+/* Links */
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+a:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+/* Paragraph spacing */
+p {
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+}
+
+/* Utility classes */
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
+}

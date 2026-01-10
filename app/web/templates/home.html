@@ -1,5 +1,27 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Welcome to PyCoach Web</h1>
-<p>Local-first Python learning companion.</p>
+<div class="welcome-box">
+  <h1>Welcome to PyCoach Web</h1>
+  <p>Your local-first Python learning companion powered by AI</p>
+  <p style="margin-top: 1rem; font-size: 1rem;">Start your journey with micro-lessons, practice coding, review flashcards, and chat with the AI coach!</p>
+</div>
+
+<div class="feature-grid">
+  <div class="card">
+    <h3>Learn</h3>
+    <p>Browse interactive Python lessons with examples and challenges</p>
+  </div>
+  <div class="card">
+    <h3>Practice</h3>
+    <p>Write and execute Python code in your browser</p>
+  </div>
+  <div class="card">
+    <h3>Flashcards</h3>
+    <p>Master concepts with spaced repetition</p>
+  </div>
+  <div class="card">
+    <h3>AI Coach</h3>
+    <p>Get help from Ollama-powered assistant</p>
+  </div>
+</div>
 {% endblock %}

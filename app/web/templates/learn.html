@@ -1,9 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Micro-lessons</h2>
-<ul>
-  {% for l in lessons %}
-    <li><strong>{{ l.id }}</strong> — {{ l.title }}<br><pre>{{ l.example }}</pre></li>
-  {% endfor %}
-</ul>
+<h2>Micro-Lessons</h2>
+<p class="text-secondary" style="margin-bottom: 2rem;">Master Python fundamentals with interactive examples and challenges</p>
+
+{% for l in lessons %}
+<div class="lesson-card">
+  <div class="lesson-title">
+    <span class="lesson-id">{{ l.id }}</span>
+    <span>{{ l.title }}</span>
+  </div>
+  
+  <h4>Example:</h4>
+  <pre>{{ l.example }}</pre>
+  
+  <div class="lesson-challenge">
+    <strong>Challenge:</strong> {{ l.challenge }}
+  </div>
+</div>
+{% endfor %}
 {% endblock %}

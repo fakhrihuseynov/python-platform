@@ -1,27 +1,42 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Flashcards Review</h2>
+<p class="text-secondary" style="margin-bottom: 2rem;">Review your flashcards using spaced repetition</p>
+
 {% if cards %}
   {% for c in cards %}
-    <div class="card">
-      <p><strong>{{ c.front }}</strong></p>
-      <details><summary>Show Answer</summary><p>{{ c.back }}</p></details>
-      <form method="post" style="margin-top:8px;">
+    <div class="flashcard">
+      <p style="font-size: 1.125rem; margin-bottom: 1rem;">
+        <strong>{{ c.front }}</strong>
+      </p>
+      
+      <details style="margin: 1.5rem 0;">
+        <summary>Show Answer</summary>
+        <div style="padding: 1rem; margin-top: 0.5rem; background: var(--bg-secondary); border-radius: 6px; border: 1px solid var(--border);">
+          <p style="color: var(--text-primary); margin: 0;">{{ c.back }}</p>
+        </div>
+      </details>
+      
+      <form method="post" style="background: transparent; padding: 0; border: none; box-shadow: none;">
         <input type="hidden" name="card_id" value="{{ c.id }}">
-        <label>Grade:
-          <select name="grade">
-            <option value="1">1 (again)</option>
-            <option value="2">2</option>
-            <option value="3">3 (good)</option>
-            <option value="4">4</option>
-            <option value="5">5 (easy)</option>
+        <label style="display: block; margin-bottom: 0.75rem;">How well did you know this?</label>
+        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+          <select name="grade" style="flex: 1; min-width: 200px;">
+            <option value="1">1 - Again (didn't know)</option>
+            <option value="2">2 - Hard</option>
+            <option value="3" selected>3 - Good</option>
+            <option value="4">4 - Easy</option>
+            <option value="5">5 - Perfect</option>
           </select>
-        </label>
-        <button type="submit">Save</button>
+          <button type="submit" style="margin: 0;">Save Grade</button>
+        </div>
       </form>
     </div>
   {% endfor %}
 {% else %}
-  <p>No cards due. Great job!</p>
+  <div class="success" style="text-align: center; padding: 3rem;">
+    <h3>All caught up!</h3>
+    <p>No cards due for review. Great job!</p>
+  </div>
 {% endif %}
 {% endblock %}

@@ -1,13 +1,20 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Practice</h2>
+<h2>Practice Playground</h2>
+<p class="text-secondary" style="margin-bottom: 2rem;">Write Python code and see it run instantly</p>
+
 <form method="post">
-  <textarea name="code" rows="10" style="width:100%">{{ code }}</textarea>
-  <button type="submit">Run</button>
+  <label for="code">Your Python Code:</label>
+  <textarea name="code" id="code" rows="14" placeholder="# Write your Python code here...
+print('Hello, PyCoach!')">{{ code }}</textarea>
+  <button type="submit">Run Code</button>
 </form>
+
 {% if result %}
-  <h3>Result</h3>
+<div style="margin-top: 2rem;">
+  <h3>Result:</h3>
   <pre>{{ result }}</pre>
+</div>
 {% endif %}
 {% endblock %}
 ``

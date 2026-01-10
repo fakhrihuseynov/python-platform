@@ -1,12 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Coach (Ollama - Mistral)</h2>
+<h2>AI Coach</h2>
+<p class="text-secondary" style="margin-bottom: 2rem;">Ask questions and get help from Ollama (Mistral)</p>
+
 <form method="post">
-  <textarea name="prompt" rows="6" style="width:100%">{{ prompt }}</textarea>
-  <button type="submit">Ask</button>
+  <label for="prompt">Your Question:</label>
+  <textarea name="prompt" id="prompt" rows="5" placeholder="Ask me anything about Python...
+
+Example: How do I create a list in Python?">{{ prompt }}</textarea>
+  <button type="submit">Ask Coach</button>
 </form>
+
 {% if reply %}
-  <h3>Reply</h3>
-  <pre>{{ reply }}</pre>
+<div style="margin-top: 2rem;">
+  <h3>Coach's Reply:</h3>
+  {% if 'Could not connect' in reply or 'Error' in reply %}
+    <div class="error">{{ reply }}</div>
+  {% else %}
+    <div class="card" style="white-space: pre-wrap; line-height: 1.7;">
+      {{ reply }}
+    </div>
+  {% endif %}
+</div>
 {% endif %}
 {% endblock %}
