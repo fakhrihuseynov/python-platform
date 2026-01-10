@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect
-from ...core.flashcards import load_due_cards, grade_card
+from core.flashcards import load_due_cards, grade_card
 
 bp = Blueprint("flashcards", __name__)
 

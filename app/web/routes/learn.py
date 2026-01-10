@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template
-from ...core.lessons import get_lessons
+from core.lessons import get_lessons
 
 bp = Blueprint("learn", __name__)
 

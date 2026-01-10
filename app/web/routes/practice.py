@@ -1,5 +1,5 @@
 from flask import Blueprint, request, render_template
-from ...core.practice import run_practice
+from core.practice import run_practice
 
 bp = Blueprint("practice", __name__)
 

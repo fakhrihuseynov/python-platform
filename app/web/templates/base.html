@@ -1,17 +1,18 @@
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <title>PyCoach Web</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    {{ url_for(
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
   </head>
   <body>
     <nav class="nav">
-      {{ url_for(Home</a>
-      {{ url_for(Learn</a>
-      {{ url_for(Practice</a>
-      {{ url_for(Flashcards</a>
-      {{ url_for(Coach</a>
+      <a href="{{ url_for('home.index') }}">Home</a>
+      <a href="{{ url_for('learn.list_lessons') }}">Learn</a>
+      <a href="{{ url_for('practice.practice') }}">Practice</a>
+      <a href="{{ url_for('flashcards.review') }}">Flashcards</a>
+      <a href="{{ url_for('coach.coach') }}">Coach</a>
     </nav>
     <main class="container">
       {% block content %}{% endblock %}
