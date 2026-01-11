@@ -63,7 +63,7 @@ body {
 /* Navigation */
 .nav {
   background: var(--bg-primary);
-  padding: 1.25rem 3rem;
+  /* padding: 1.25rem 3rem; */
   box-shadow: 0 4px 12px var(--shadow);
   position: sticky;
   top: 0;
@@ -77,12 +77,13 @@ body {
   display: flex;
   gap: 0.25rem;
   align-items: center;
+  margin-left: 170px;
 }
 
 .nav a {
   color: var(--text-primary);
   text-decoration: none;
-  padding: 0.75rem 1.25rem;
+  padding: 2rem 3.25rem;
   border-radius: 0;
   transition: all 0.15s ease;
   font-weight: 500;
@@ -124,6 +125,8 @@ body {
   font-weight: 500;
   font-size: 0.9rem;
   transition: all 0.15s ease;
+  margin-right: 20px;
+  margin-bottom: 15px;
 }
 
 .theme-toggle:hover {
