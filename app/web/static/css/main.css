@@ -710,24 +710,42 @@ p {
   border-left-color: #ffffff !important;
 }
 
+/* Selection highlighting for CodeMirror in dark mode */
+/* Use a subtle light overlay so selected text remains readable */
+.cm-s-darcula .CodeMirror-selected,
+[data-theme="dark"] .CodeMirror .CodeMirror-selected {
+  background: rgba(255,255,255,0.06) !important;
+}
+
+.cm-s-darcula .CodeMirror-line ::selection,
+.cm-s-darcula .CodeMirror-line ::-moz-selection,
+[data-theme="dark"] .CodeMirror .CodeMirror-line ::selection,
+[data-theme="dark"] .CodeMirror .CodeMirror-line ::-moz-selection {
+  background: rgba(255,255,255,0.06);
+}
+
+/* Invert selected token color slightly for readability */
+.cm-s-darcula .CodeMirror-selected span,
+[data-theme="dark"] .CodeMirror .CodeMirror-selected span {
+  color: inherit !important;
+}
+
 /* CodeMirror token color tweaks for Darcula (dark mode)
    - Make builtins/functions yellow-ish
    - Make strings green-ish
    These only target the Darcula theme class so light theme is unaffected.
 */
+/* Highlight true builtins / definitions in yellow (narrow set) */
 .cm-s-darcula .cm-builtin,
 .cm-s-darcula .cm-variable-2,
 .cm-s-darcula .cm-def,
-.cm-s-darcula .cm-variable,
-.cm-s-darcula .cm-keyword,
 .cm-s-darcula .cm-atom {
   color: #f6c85f !important; /* yellow for builtins and related tokens */
   font-weight: 600;
 }
 
-/* broaden to other identifier classes if tokenization differs */
+/* Keep a small subset for other identifier-like tokens — avoid coloring keywords/globals */
 .cm-s-darcula .cm-variable-3,
-.cm-s-darcula .cm-meta,
 .cm-s-darcula .cm-property {
   color: #f6c85f !important;
   font-weight: 600;
@@ -746,15 +764,12 @@ p {
 [data-theme="dark"] .CodeMirror .cm-builtin,
 [data-theme="dark"] .CodeMirror .cm-variable-2,
 [data-theme="dark"] .CodeMirror .cm-def,
-[data-theme="dark"] .CodeMirror .cm-variable,
-[data-theme="dark"] .CodeMirror .cm-keyword,
 [data-theme="dark"] .CodeMirror .cm-atom {
   color: #f6c85f !important; /* yellow for builtins and related tokens */
   font-weight: 600;
 }
 
 [data-theme="dark"] .CodeMirror .cm-variable-3,
-[data-theme="dark"] .CodeMirror .cm-meta,
 [data-theme="dark"] .CodeMirror .cm-property {
   color: #f6c85f !important;
   font-weight: 600;
@@ -767,6 +782,11 @@ p {
 
 [data-theme="dark"] .CodeMirror .cm-number {
   color: #f08c6c !important;
+}
+
+/* Ensure default (light) CodeMirror theme uses the requested purple for keywords */
+.cm-s-default .cm-keyword {
+  color: #f297ff !important; /* purple requested by user */
 }
 
 /* Modal (practice input) - solid themed backdrop and panel */
