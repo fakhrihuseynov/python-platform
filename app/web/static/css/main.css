@@ -659,6 +659,89 @@ p {
   margin: 2rem 0;
 }
 
+/* CodeMirror theme integration: inherit site colors */
+.CodeMirror {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border);
+  height: auto;
+}
+.CodeMirror-gutters {
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border);
+}
+.CodeMirror-scroll {
+  max-height: 40vh;
+}
+
+/* Cursor and line-number styling for dark mode */
+.CodeMirror-cursor {
+  border-left: 1px solid var(--text-primary);
+}
+.CodeMirror-focused .CodeMirror-cursor {
+  animation: blink 1s steps(2,start) infinite;
+}
+.CodeMirror-gutter .CodeMirror-linenumber {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .CodeMirror {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .CodeMirror-gutters {
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+}
+
+[data-theme="dark"] .CodeMirror-gutter .CodeMirror-linenumber {
+  color: var(--text-secondary);
+}
+
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Strong white cursor in dark mode */
+[data-theme="dark"] .CodeMirror-cursor {
+  border-left-color: #ffffff !important;
+}
+
+/* CodeMirror token color tweaks for Darcula (dark mode)
+   - Make builtins/functions yellow-ish
+   - Make strings green-ish
+   These only target the Darcula theme class so light theme is unaffected.
+*/
+.cm-s-darcula .cm-builtin,
+.cm-s-darcula .cm-variable-2,
+.cm-s-darcula .cm-def,
+.cm-s-darcula .cm-variable,
+.cm-s-darcula .cm-keyword,
+.cm-s-darcula .cm-atom {
+  color: #f6c85f !important; /* yellow for builtins and related tokens */
+  font-weight: 600;
+}
+
+/* broaden to other identifier classes if tokenization differs */
+.cm-s-darcula .cm-variable-3,
+.cm-s-darcula .cm-meta,
+.cm-s-darcula .cm-property {
+  color: #f6c85f !important;
+  font-weight: 600;
+}
+
+.cm-s-darcula .cm-string,
+.cm-s-darcula .cm-string-2 {
+  color: #8bd48b !important; /* green for strings */
+}
+
+.cm-s-darcula .cm-number {
+  color: #f08c6c !important;
+}
+
 /* Modal (practice input) - solid themed backdrop and panel */
 .modal-backdrop {
   display: none;
