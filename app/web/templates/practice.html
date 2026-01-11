@@ -40,6 +40,71 @@ let pendingInputs = [];
 let collectedInputs = [];
 let currentInputIndex = 0;
 
+// Auto-pairing for the code editor: (), {}, [], "", ''
+(function() {
+  const editor = document.getElementById('code');
+  if (!editor) return;
+  const pairs = {
+    '(': ')',
+    '[': ']',
+    '{': '}',
+    '"': '"',
+    "'": "'"
+  };
+
+  editor.addEventListener('keydown', function(e) {
+    const val = editor.value;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+
+    // Opening chars: wrap selection or insert pair
+    if (pairs.hasOwnProperty(e.key)) {
+      e.preventDefault();
+      const close = pairs[e.key];
+      if (start !== end) {
+        const before = val.slice(0, start);
+        const selected = val.slice(start, end);
+        const after = val.slice(end);
+        editor.value = before + e.key + selected + close + after;
+        editor.selectionStart = start + 1;
+        editor.selectionEnd = end + 1;
+      } else {
+        const before = val.slice(0, start);
+        const after = val.slice(start);
+        editor.value = before + e.key + close + after;
+        editor.selectionStart = editor.selectionEnd = start + 1;
+      }
+      return;
+    }
+
+    // Closing chars: if next char is the same, move over it
+    const closers = Object.values(pairs);
+    if (closers.includes(e.key)) {
+      if (start === end && val[start] === e.key) {
+        e.preventDefault();
+        editor.selectionStart = editor.selectionEnd = start + 1;
+        return;
+      }
+    }
+
+    // Backspace: if deleting opening with immediate closer, remove both
+    if (e.key === 'Backspace') {
+      if (start === end && start > 0) {
+        const prev = val[start - 1];
+        const next = val[start];
+        if (pairs[prev] && pairs[prev] === next) {
+          e.preventDefault();
+          const before = val.slice(0, start - 1);
+          const after = val.slice(start + 1);
+          editor.value = before + after;
+          editor.selectionStart = editor.selectionEnd = start - 1;
+          return;
+        }
+      }
+    }
+  });
+})();
+
 document.getElementById('practiceForm').addEventListener('submit', function(e) {
   e.preventDefault();
   
