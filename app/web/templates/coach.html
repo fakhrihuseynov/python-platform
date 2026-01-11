@@ -3,12 +3,12 @@
 <h2>AI Coach</h2>
 <p class="text-secondary" style="margin-bottom: 2rem;">Ask questions and get help from Ollama (Mistral)</p>
 
-<form method="post">
+<form method="post" id="coachForm">
   <label for="prompt">Your Question:</label>
   <textarea name="prompt" id="prompt" rows="5" placeholder="Ask me anything about Python...
 
 Example: How do I create a list in Python?">{{ prompt }}</textarea>
-  <button type="submit">Ask Coach</button>
+  <button type="submit" id="askBtn">Ask Coach</button>
 </form>
 
 {% if reply %}
@@ -17,10 +17,19 @@ Example: How do I create a list in Python?">{{ prompt }}</textarea>
   {% if 'Could not connect' in reply or 'Error' in reply %}
     <div class="error">{{ reply }}</div>
   {% else %}
-    <div class="card" style="white-space: pre-wrap; line-height: 1.7;">
-      {{ reply }}
+    <div class="card markdown-content">
+      {{ reply_html|safe }}
     </div>
   {% endif %}
 </div>
 {% endif %}
+
+<script>
+document.getElementById('coachForm').addEventListener('submit', function(e) {
+  const btn = document.getElementById('askBtn');
+  btn.textContent = 'Answering...';
+  btn.classList.add('loading');
+  btn.disabled = true;
+});
+</script>
 {% endblock %}

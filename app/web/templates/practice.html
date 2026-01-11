@@ -3,18 +3,122 @@
 <h2>Practice Playground</h2>
 <p class="text-secondary" style="margin-bottom: 2rem;">Write Python code and see it run instantly</p>
 
-<form method="post">
+<form method="post" id="practiceForm">
   <label for="code">Your Python Code:</label>
   <textarea name="code" id="code" rows="14" placeholder="# Write your Python code here...
 print('Hello, PyCoach!')">{{ code }}</textarea>
-  <button type="submit">Run Code</button>
+  <input type="hidden" name="user_inputs" id="user_inputs">
+  <button type="submit" id="runBtn">Run Code</button>
 </form>
 
 {% if result %}
 <div style="margin-top: 2rem;">
   <h3>Result:</h3>
-  <pre>{{ result }}</pre>
+  {% if '⚠️' in result %}
+    <div class="warning">{{ result }}</div>
+  {% else %}
+    <pre>{{ result }}</pre>
+  {% endif %}
 </div>
 {% endif %}
+
+<!-- Input Modal -->
+<div id="inputModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+  <div style="background: var(--background); padding: 2rem; max-width: 500px; width: 90%; border: 1px solid var(--border);">
+    <h3 id="inputPrompt">Enter value:</h3>
+    <input type="text" id="inputValue" style="width: 100%; padding: 0.75rem; margin: 1rem 0; border: 1px solid var(--border); background: var(--background); color: var(--text); font-family: 'JetBrains Mono', monospace;">
+    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+      <button type="button" id="inputSubmit" style="background: var(--primary); color: white; border: none; padding: 0.75rem 1.5rem; cursor: pointer;">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let pendingInputs = [];
+let collectedInputs = [];
+let currentInputIndex = 0;
+
+document.getElementById('practiceForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const btn = document.getElementById('runBtn');
+  const code = document.getElementById('code').value;
+  
+  btn.textContent = 'Running...';
+  btn.classList.add('loading');
+  btn.disabled = true;
+  
+  // First, check if code needs inputs
+  fetch(window.location.pathname, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({code: code})
+  })
+  .then(r => r.text())
+  .then(html => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const resultPre = doc.querySelector('pre');
+    
+    if (resultPre) {
+      const text = resultPre.textContent;
+      
+      // Check if we need input
+      try {
+        const data = JSON.parse(text);
+        if (data.need_input) {
+          // Collect inputs from user
+          pendingInputs = data.prompts;
+          collectedInputs = [];
+          currentInputIndex = 0;
+          showInputModal();
+          return;
+        }
+      } catch (e) {
+        // Not JSON, just regular output
+      }
+    }
+    
+    // No inputs needed or result is ready, submit normally
+    btn.textContent = 'Run Code';
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    document.getElementById('user_inputs').value = '';
+    document.getElementById('practiceForm').submit();
+  });
+});
+
+function showInputModal() {
+  if (currentInputIndex >= pendingInputs.length) {
+    // All inputs collected, submit form with inputs
+    document.getElementById('user_inputs').value = JSON.stringify({values: collectedInputs});
+    document.getElementById('inputModal').style.display = 'none';
+    document.getElementById('practiceForm').submit();
+    return;
+  }
+  
+  const modal = document.getElementById('inputModal');
+  const prompt = document.getElementById('inputPrompt');
+  const input = document.getElementById('inputValue');
+  
+  prompt.textContent = pendingInputs[currentInputIndex];
+  input.value = '';
+  modal.style.display = 'flex';
+  input.focus();
+}
+
+document.getElementById('inputSubmit').addEventListener('click', function() {
+  const value = document.getElementById('inputValue').value;
+  collectedInputs.push(value);
+  currentInputIndex++;
+  showInputModal();
+});
+
+document.getElementById('inputValue').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    document.getElementById('inputSubmit').click();
+  }
+});
+</script>
 {% endblock %}
 ``

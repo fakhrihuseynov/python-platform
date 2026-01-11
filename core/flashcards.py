@@ -36,6 +36,16 @@ def load_due_cards():
     cards = [c for c in _load_cards() if c.get("next_review_at", today) <= today]
     return cards[:7]
 
+def regenerate_cards():
+    """Reset all cards to be due today for review."""
+    cards = _load_cards()
+    today = datetime.now().strftime("%Y-%m-%d")
+    for card in cards:
+        card["next_review_at"] = today
+        card["interval_days"] = 1
+        card["ease_factor"] = 2.5
+    _save_cards(cards)
+
 def grade_card(card_id: str, grade: int):
     cards = _load_cards()
     for c in cards:
