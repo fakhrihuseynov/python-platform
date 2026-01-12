@@ -1,26 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
 <div style="display:flex; gap:1.5rem;">
-  <aside style="width: 320px;">
+  <aside style="width: 380px;">
     <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-        <h3 class="futuristic-title" style="margin:0; font-size:1rem;">Docs</h3>
-        <button id="newDocBtn" class="btn">New</button>
+      <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.75rem;">
+        <h3 class="futuristic-title" style="margin:0; font-size:1rem; flex:1">Docs</h3>
+        <input id="newDocName" placeholder="New file name" style="padding:0.35rem 0.5rem; border:1px solid var(--border); width:160px;">
+        <button id="createDocBtn" class="btn">New</button>
       </div>
       <div id="docsList" style="display:flex; flex-direction:column; gap:0.5rem; max-height:60vh; overflow:auto;"></div>
     </div>
   </aside>
 
   <section style="flex:1;">
-    <div class="card">
-      <h3 style="margin-top:0;">Editor</h3>
-      <input id="docTitle" placeholder="Document title" style="width:100%; padding:0.5rem; margin-bottom:0.75rem; border:1px solid var(--border);">
-      <textarea id="docContent" style="width:100%; height:60vh; padding:1rem; border:1px solid var(--border); font-family:JetBrains Mono, monospace;"></textarea>
-      <div style="display:flex; gap:0.75rem; justify-content:flex-end; margin-top:0.75rem;">
-        <button id="deleteDocBtn" class="btn btn-secondary">Delete</button>
-        <button id="renameDocBtn" class="btn btn-secondary">Rename</button>
-        <button id="saveDocBtn" class="btn">Save</button>
+    <div class="card" style="position:relative;">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;">
+        <h3 style="margin-top:0; margin-bottom:0.5rem; flex:1">Editor</h3>
+        <div style="display:flex; gap:0.5rem;">
+          <button id="deleteDocBtn" class="btn btn-secondary">Delete</button>
+          <button id="renameDocBtn" class="btn btn-secondary">Rename</button>
+          <button id="saveDocBtn" class="btn">Save</button>
+        </div>
       </div>
+      <input id="docTitle" placeholder="Document title" style="width:100%; padding:0.5rem; margin:0.5rem 0 0.75rem 0; border:1px solid var(--border);">
+      <textarea id="docContent" style="width:100%; height:60vh; padding:1rem; border:1px solid var(--border); font-family:JetBrains Mono, monospace;"></textarea>
     </div>
   </section>
 </div>
@@ -55,17 +58,51 @@ function makeItem(d){
   });
   el.appendChild(a);
   const actions = document.createElement('div');
+  // small inline delete button for list items
   const del = document.createElement('button');
   del.className = 'btn btn-secondary';
-  del.textContent = 'X';
+  del.textContent = 'Del';
   del.addEventListener('click', async ()=>{
-    if (!confirm('Delete this doc?')) return;
     await fetch(`/learn/docs/file/${d.id}`, {method:'DELETE'});
+    // if deleting currently open doc, clear editor
+    const current = document.getElementById('saveDocBtn').dataset.current;
+    if (current === d.id) {
+      document.getElementById('docTitle').value='';
+      document.getElementById('docContent').value='';
+      document.getElementById('saveDocBtn').dataset.current = '';
+    }
     loadList();
-    document.getElementById('docTitle').value='';
-    document.getElementById('docContent').value='';
   });
   actions.appendChild(del);
+  // inline rename button for list items
+  const ren = document.createElement('button');
+  ren.className = 'btn btn-secondary';
+  ren.textContent = 'Ren';
+  ren.style.marginLeft = '0.25rem';
+  ren.addEventListener('click', ()=>{
+    // replace link with inline input
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = a.textContent;
+    nameInput.style.padding = '0.25rem';
+    nameInput.style.width = '160px';
+    el.replaceChild(nameInput, a);
+    nameInput.focus();
+    function finishRename(){
+      const newName = (nameInput.value || '').trim() || 'Untitled';
+      fetch(`/learn/docs/file/${d.id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:newName})})
+        .then(res=>res.json())
+        .then(async (entry)=>{
+          await loadList();
+          // select renamed file
+          const anchors = document.querySelectorAll('#docsList a');
+          anchors.forEach(a2=>{ if (a2.textContent === entry.name) a2.click(); });
+        });
+    }
+    nameInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') finishRename(); });
+    nameInput.addEventListener('blur', finishRename);
+  });
+  actions.appendChild(ren);
   el.appendChild(actions);
   return el;
 }
@@ -77,11 +114,16 @@ async function loadList(){
   files.forEach(f=> list.appendChild(makeItem(f)));
 }
 
-document.getElementById('newDocBtn').addEventListener('click', async ()=>{
-  const name = prompt('New doc name') || 'Untitled';
+document.getElementById('createDocBtn').addEventListener('click', async ()=>{
+  const nameEl = document.getElementById('newDocName');
+  const name = (nameEl.value || '').trim() || 'Untitled';
+  // create new doc in left panel
   const res = await fetch('/learn/docs/file', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name, content:''})});
   const data = await res.json();
-  loadList();
+  nameEl.value = '';
+  await loadList();
+  // auto-select the created doc
+  document.querySelectorAll('#docsList a').forEach(a=>{ if (a.textContent === name) a.click(); });
 });
 
 document.getElementById('saveDocBtn').addEventListener('click', async ()=>{
@@ -90,30 +132,34 @@ document.getElementById('saveDocBtn').addEventListener('click', async ()=>{
   const content = document.getElementById('docContent').value || '';
   if (!id){
     const res = await fetch('/learn/docs/file', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name, content:content})});
-    await res.json();
-    loadList();
+    const newEntry = await res.json();
+    await loadList();
+    // select new
+    document.getElementById('saveDocBtn').dataset.current = newEntry.id;
     return;
   }
   await fetch(`/learn/docs/file/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name, content:content})});
-  loadList();
+  await loadList();
 });
 
 document.getElementById('renameDocBtn').addEventListener('click', async ()=>{
   const id = document.getElementById('renameDocBtn').dataset.current;
-  if (!id) return alert('Select a doc first');
-  const name = prompt('New name') || 'Untitled';
+  if (!id) return;
+  const name = document.getElementById('docTitle').value || 'Untitled';
   await fetch(`/learn/docs/file/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name})});
-  loadList();
+  await loadList();
 });
 
 document.getElementById('deleteDocBtn').addEventListener('click', async ()=>{
   const id = document.getElementById('deleteDocBtn').dataset.current;
-  if (!id) return alert('Select a doc first');
-  if (!confirm('Delete this doc?')) return;
+  if (!id) return;
   await fetch(`/learn/docs/file/${id}`, {method:'DELETE'});
-  loadList();
+  await loadList();
   document.getElementById('docTitle').value='';
   document.getElementById('docContent').value='';
+  document.getElementById('saveDocBtn').dataset.current = '';
+  document.getElementById('deleteDocBtn').dataset.current = '';
+  document.getElementById('renameDocBtn').dataset.current = '';
 });
 
 loadList();
