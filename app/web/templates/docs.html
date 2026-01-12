@@ -14,25 +14,25 @@
 
   <section id="docsEditorSection" style="flex:1; padding:1.5rem; box-sizing:border-box; position:fixed; left:30vw; top:95px; right:0; bottom:0; overflow:auto;">
     <div class="card" style="position:relative; margin:0;">
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; position:relative;">
         <h3 style="margin-top:0; margin-bottom:0.5rem; flex:1">Editor</h3>
         <div style="display:flex; gap:0.5rem; align-items:center;">
-          <!-- toolbar inline with Save -->
-          <div id="editorToolbar" style="display:flex; gap:8px; align-items:center;">
+          <!-- toolbar inline with Save. Also create a fixed-left toolbar so it's ~20-30% from left edge -->
+          <div id="editorToolbar" style="display:flex; gap:8px; align-items:center; position:relative; left:auto; top:auto; z-index:auto;">
             <button class="btn" title="Bold" id="fmtBold" style="width:34px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h7a3 3 0 0 1 0 6H6z"></path><path d="M6 10h8a3 3 0 0 1 0 6H6z"></path></svg>
             </button>
             <button class="btn" title="Italic" id="fmtItalic" style="width:34px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>
             </button>
-            <select id="fmtFontFamily" title="Font family" style="height:30px; padding:0 6px; font-size:12px;">
+            <select id="fmtFontFamily" title="Font family" style="height:30px; padding:0 6px; font-size:12px; vertical-align:middle;">
               <option value="" selected>Font</option>
               <option value="Udemy Sans">Udemy Sans</option>
               <option value="Noto Sans JP">Noto Sans JP</option>
               <option value="Vazirmatn">Vazirmatn</option>
               <option value="SF Pro Text">SF Pro Text</option>
             </select>
-            <select id="fmtFontSize" title="Font size" style="height:30px; padding:0 6px; font-size:12px;">
+            <select id="fmtFontSize" title="Font size" style="height:30px; padding:0 6px; font-size:12px; vertical-align:middle;">
               <option value="8">8</option>
               <option value="9">9</option>
               <option value="10">10</option>
@@ -51,7 +51,7 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="12" width="20" height="8" rx="2"></rect><path d="M12 12V8"></path></svg>
               </button>
               <!-- highlight popover placeholder -->
-              <div id="highlightPopover" style="display:none; position:absolute; top:36px; left:0; background:var(--bg-primary); border:1px solid var(--border); padding:6px; display:flex; gap:6px; z-index:50;">
+              <div id="highlightPopover" style="display:none; position:absolute; top:36px; left:0; background:var(--bg-primary); border:1px solid var(--border); padding:6px; gap:6px; z-index:50; flex-direction:row;">
                 <button class="color-swatch" data-color="#fff475" style="width:22px; height:22px; border-radius:4px; border:1px solid #ddd; background:#fff475"></button>
                 <button class="color-swatch" data-color="#ff8a80" style="width:22px; height:22px; border-radius:4px; border:1px solid #ddd; background:#ff8a80"></button>
                 <button class="color-swatch" data-color="#a7c7ff" style="width:22px; height:22px; border-radius:4px; border:1px solid #ddd; background:#a7c7ff"></button>
@@ -276,6 +276,25 @@ if (docEl){
   autoResize(docEl);
 }
 
+// Selection preservation helpers: save selection before opening popovers and restore before applying
+let _savedRange = null;
+function saveSelection(){
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0){
+    _savedRange = sel.getRangeAt(0).cloneRange();
+  }
+}
+function restoreSelection(){
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  if (_savedRange){
+    sel.addRange(_savedRange);
+    _savedRange = null;
+    return true;
+  }
+  return false;
+}
+
 // --- Editor toolbar functionality (WYSIWYG using execCommand) ---
 function applyCommand(cmd, value=null){
   document.execCommand(cmd, false, value);
@@ -318,33 +337,60 @@ function wrapSelectionWithSpan(style){
 document.getElementById('fmtBold').addEventListener('click', ()=> applyCommand('bold'));
 document.getElementById('fmtItalic').addEventListener('click', ()=> applyCommand('italic'));
 
+document.getElementById('fmtFontFamily').addEventListener('mousedown', ()=> saveSelection());
 document.getElementById('fmtFontFamily').addEventListener('change', (e)=>{
+  restoreSelection();
   const val = e.target.value;
   if (!val) return;
   wrapSelectionWithSpan('font-family: '+val+'; font-size:11px;');
   e.target.selectedIndex = 0;
 });
 
+document.getElementById('fmtFontSize').addEventListener('mousedown', ()=> saveSelection());
 document.getElementById('fmtFontSize').addEventListener('change', (e)=>{
+  restoreSelection();
   const sz = e.target.value;
   if (!sz) return;
   wrapSelectionWithSpan('font-size: '+sz+'px;');
-  e.target.selectedIndex = 3; // reset to 11 (index may vary)
+  // keep 11 selected visually
+  e.target.value = '11';
 });
 
-document.getElementById('fmtColor').addEventListener('click', ()=> document.getElementById('colorPicker').click());
-document.getElementById('colorPicker').addEventListener('change', (e)=>{
-  const color = e.target.value;
-  const dot = document.getElementById('colorDot'); if (dot) dot.style.background = color;
-  wrapSelectionWithSpan('color: '+color+';');
+// color picker now uses an OK/Cancel popover to approve color before applying
+document.getElementById('fmtColor').addEventListener('click', (ev)=>{
+  ev.stopPropagation();
+  saveSelection();
+  // remove existing
+  const existing = document.getElementById('colorPopover'); if (existing) existing.remove();
+  const pop = document.createElement('div'); pop.id='colorPopover';
+  pop.style.position='absolute'; pop.style.background='var(--bg-primary)'; pop.style.border='1px solid var(--border)'; pop.style.padding='8px'; pop.style.display='flex'; pop.style.gap='8px'; pop.style.alignItems='center'; pop.style.zIndex='70';
+  const input = document.createElement('input'); input.type='color'; input.id='colorInputInline'; input.value='#000000'; input.style.width='36px'; input.style.height='30px';
+  const ok = document.createElement('button'); ok.className='btn'; ok.textContent='OK';
+  const cancel = document.createElement('button'); cancel.className='btn btn-secondary'; cancel.textContent='×';
+  pop.appendChild(input); pop.appendChild(ok); pop.appendChild(cancel);
+  const rect = document.getElementById('fmtColor').getBoundingClientRect();
+  pop.style.left = rect.left + 'px'; pop.style.top = (rect.bottom + 6) + 'px';
+  document.body.appendChild(pop);
+  input.focus();
+  function cleanup(){ const p = document.getElementById('colorPopover'); if (p) p.remove(); }
+  cancel.addEventListener('click', cleanup);
+  ok.addEventListener('click', ()=>{
+    const color = input.value;
+    const dot = document.getElementById('colorDot'); if (dot) dot.style.background = color;
+    restoreSelection();
+    wrapSelectionWithSpan('color: '+color+';');
+    cleanup();
+  });
 });
 
 // highlight popover logic: show/hide and apply color from swatches
 const highlightBtn = document.getElementById('fmtHighlight');
 const highlightPopover = document.getElementById('highlightPopover');
+if (highlightPopover) highlightPopover.style.display = 'none';
 if (highlightBtn && highlightPopover){
   highlightBtn.addEventListener('click', (ev)=>{
     ev.stopPropagation();
+    saveSelection();
     highlightPopover.style.display = highlightPopover.style.display === 'flex' ? 'none' : 'flex';
   });
   // click outside closes popover
@@ -354,6 +400,7 @@ if (highlightBtn && highlightPopover){
   document.querySelectorAll('#highlightPopover .color-swatch').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const c = btn.dataset.color;
+      restoreSelection();
       wrapSelectionWithSpan('background-color: '+c+'; padding:0 0.1rem;');
       highlightPopover.style.display='none';
     });
@@ -398,6 +445,89 @@ function sanitizePreviewHtml(html){
   return s;
 }
 
+// unsaved-change tracking and navigation guard
+let currentSnapshot = '';
+let dirty = false;
+let currentDocId = '';
+
+function setCurrentSnapshot(){
+  const el = document.getElementById('docContent');
+  currentSnapshot = el ? el.innerHTML : '';
+  dirty = false;
+}
+
+function markDirty(){ dirty = true; }
+
+// beforeunload native prompt as fallback
+window.addEventListener('beforeunload', (e)=>{
+  if (dirty){ e.preventDefault(); e.returnValue = ''; }
+});
+
+// helper confirmation modal for unsaved changes
+function showUnsavedModal(onSave, onDiscard, onCancel){
+  const existing = document.getElementById('unsavedModal'); if (existing) existing.remove();
+  const modal = document.createElement('div'); modal.id='unsavedModal';
+  modal.style.position='fixed'; modal.style.left='0'; modal.style.top='0'; modal.style.right='0'; modal.style.bottom='0'; modal.style.display='flex'; modal.style.alignItems='center'; modal.style.justifyContent='center'; modal.style.background='rgba(0,0,0,0.3)'; modal.style.zIndex='200';
+  const card = document.createElement('div'); card.style.background='var(--bg-primary)'; card.style.border='1px solid var(--border)'; card.style.padding='16px'; card.style.borderRadius='6px'; card.style.minWidth='320px';
+  const p = document.createElement('div'); p.textContent = 'You have unsaved changes. Save before leaving?'; p.style.marginBottom='12px';
+  const btnRow = document.createElement('div'); btnRow.style.display='flex'; btnRow.style.gap='8px'; btnRow.style.justifyContent='flex-end';
+  const saveBtn = document.createElement('button'); saveBtn.className='btn'; saveBtn.textContent='Save';
+  const discardBtn = document.createElement('button'); discardBtn.className='btn btn-secondary'; discardBtn.textContent='Discard';
+  const cancelBtn = document.createElement('button'); cancelBtn.className='btn btn-secondary'; cancelBtn.textContent='Cancel';
+  btnRow.appendChild(cancelBtn); btnRow.appendChild(discardBtn); btnRow.appendChild(saveBtn);
+  card.appendChild(p); card.appendChild(btnRow); modal.appendChild(card); document.body.appendChild(modal);
+  saveBtn.addEventListener('click', ()=>{ modal.remove(); onSave && onSave(); });
+  discardBtn.addEventListener('click', ()=>{ modal.remove(); onDiscard && onDiscard(); });
+  cancelBtn.addEventListener('click', ()=>{ modal.remove(); onCancel && onCancel(); });
+}
+
+// attempt to navigate to a document id, with unsaved-change handling
+async function attemptLoadFile(id, name){
+  if (dirty && id !== currentDocId){
+    showUnsavedModal(async ()=>{ // save then load
+      await document.getElementById('saveDocBtn').click();
+      currentDocId = id;
+      loadFileById(id);
+    }, ()=>{ // discard and load
+      dirty = false;
+      currentDocId = id;
+      loadFileById(id);
+    }, ()=>{ /* cancel - do nothing */ });
+    return;
+  }
+  currentDocId = id;
+  await loadFileById(id);
+}
+
+// load helper used by attemptLoadFile
+async function loadFileById(id){
+  const res = await fetch(`/learn/docs/file/${id}`);
+  const data = await res.json();
+  document.getElementById('docTitle').value = data.name || '';
+  const docEl = document.getElementById('docContent'); if (docEl) docEl.innerHTML = data.content || '';
+  setCurrentSnapshot();
+  document.getElementById('saveDocBtn').dataset.current = id;
+}
+
+// wire clicks on left-panel anchors to attemptLoadFile instead of direct load
+document.addEventListener('click', (ev)=>{
+  const a = ev.target.closest && ev.target.closest('#docsList a');
+  if (a){
+    ev.preventDefault();
+    // find file id by walking up
+    const parent = a.closest('.doc-item');
+    if (parent && parent.dataset && parent.dataset.id){
+      attemptLoadFile(parent.dataset.id, a.textContent);
+    }
+  }
+});
+
+// ensure content edits set dirty
+const docContentObserver = new MutationObserver(()=>{ markDirty(); });
+const docElRef = document.getElementById('docContent');
+if (docElRef) docContentObserver.observe(docElRef, {subtree:true, characterData:true, childList:true});
+
+// Preview button (uses sanitizer)
 document.getElementById('previewBtn').addEventListener('click', ()=>{
   const preview = document.getElementById('previewArea');
   const docEl = document.getElementById('docContent');
