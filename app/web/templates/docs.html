@@ -14,15 +14,63 @@
 
   <section id="docsEditorSection" style="flex:1; padding:1.5rem; box-sizing:border-box; position:fixed; left:30vw; top:95px; right:0; bottom:0; overflow:auto;">
     <div class="card" style="position:relative; margin:0;">
-      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
         <h3 style="margin-top:0; margin-bottom:0.5rem; flex:1">Editor</h3>
-        <div style="display:flex; gap:0.5rem;">
-          <button id="saveDocBtn" class="btn">Save</button>
-          <button id="previewBtn" class="btn btn-secondary">Preview</button>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+          <!-- toolbar inline with Save -->
+          <div id="editorToolbar" style="display:flex; gap:8px; align-items:center;">
+            <button class="btn" title="Bold" id="fmtBold" style="width:34px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h7a3 3 0 0 1 0 6H6z"></path><path d="M6 10h8a3 3 0 0 1 0 6H6z"></path></svg>
+            </button>
+            <button class="btn" title="Italic" id="fmtItalic" style="width:34px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>
+            </button>
+            <select id="fmtFontFamily" title="Font family" style="height:30px; padding:0 6px; font-size:12px;">
+              <option value="" selected>Font</option>
+              <option value="Udemy Sans">Udemy Sans</option>
+              <option value="Noto Sans JP">Noto Sans JP</option>
+              <option value="Vazirmatn">Vazirmatn</option>
+              <option value="SF Pro Text">SF Pro Text</option>
+            </select>
+            <select id="fmtFontSize" title="Font size" style="height:30px; padding:0 6px; font-size:12px;">
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+              <option value="11" selected>11</option>
+              <option value="12">12</option>
+              <option value="14">14</option>
+              <option value="16">16</option>
+              <option value="18">18</option>
+            </select>
+            <button class="btn" id="fmtLink" title="Insert link" style="width:34px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+              <!-- paperclip icon -->
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6.5 6.5 0 0 1-9.19-9.19l8.48-8.48a4.5 4.5 0 0 1 6.36 6.36L9.5 18.07a2.5 2.5 0 0 1-3.54-3.54l7.78-7.78"></path></svg>
+            </button>
+            <div style="position:relative;">
+              <button class="btn" id="fmtHighlight" title="Highlight" style="width:34px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="12" width="20" height="8" rx="2"></rect><path d="M12 12V8"></path></svg>
+              </button>
+              <!-- highlight popover placeholder -->
+              <div id="highlightPopover" style="display:none; position:absolute; top:36px; left:0; background:var(--bg-primary); border:1px solid var(--border); padding:6px; display:flex; gap:6px; z-index:50;">
+                <button class="color-swatch" data-color="#fff475" style="width:22px; height:22px; border-radius:4px; border:1px solid #ddd; background:#fff475"></button>
+                <button class="color-swatch" data-color="#ff8a80" style="width:22px; height:22px; border-radius:4px; border:1px solid #ddd; background:#ff8a80"></button>
+                <button class="color-swatch" data-color="#a7c7ff" style="width:22px; height:22px; border-radius:4px; border:1px solid #ddd; background:#a7c7ff"></button>
+                <button class="color-swatch" data-color="#b9f6ca" style="width:22px; height:22px; border-radius:4px; border:1px solid #ddd; background:#b9f6ca"></button>
+              </div>
+            </div>
+            <button class="btn" id="fmtColor" title="Font color" style="width:34px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+              <span id="colorDot" style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#000; border:1px solid #ccc;"></span>
+            </button>
+            <input type="color" id="colorPicker" style="display:none;" />
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            <button id="saveDocBtn" class="btn">Save</button>
+            <button id="previewBtn" class="btn btn-secondary">Preview</button>
+          </div>
         </div>
       </div>
       <input id="docTitle" placeholder="Document title" style="width:100%; padding:0.5rem; margin:0.5rem 0 0.75rem 0; border:1px solid var(--border);">
-      <textarea id="docContent" style="width:100%; height:20vh; padding:1rem; border:1px solid var(--border); font-family:JetBrains Mono, monospace;"></textarea>
+      <div id="docContent" contenteditable="true" style="width:100%; min-height:20vh; max-height:60vh; padding:1rem; border:1px solid var(--border); overflow:auto; font-family:inherit; white-space:pre-wrap; font-size:11px;"></div>
       <div id="previewArea" style="display:none; margin-top:0.75rem; padding:1rem; border:1px solid var(--border); background:var(--bg-primary); font-family: 'Udemy Sans', 'Noto Sans JP', 'Vazirmatn', 'SF Pro Text', -apple-system, BlinkMacSystemFont, Roboto, 'Segoe UI', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';"></div>
     </div>
   </section>
@@ -62,9 +110,10 @@ function makeItem(d){
     const res = await fetch(`/learn/docs/file/${d.id}`);
     const data = await res.json();
     document.getElementById('docTitle').value = d.name;
-    document.getElementById('docContent').value = data.content;
+    const docEl = document.getElementById('docContent');
+    if (docEl) docEl.innerHTML = data.content || '';
     // auto-resize editor to fit loaded content
-    if (typeof autoResize === 'function') autoResize(document.getElementById('docContent'));
+    if (typeof autoResize === 'function') autoResize(docEl);
     document.getElementById('saveDocBtn').dataset.current = d.id;
   });
   // allow clicking anywhere on the row (except action buttons) to select the file
@@ -75,8 +124,9 @@ function makeItem(d){
     const res = await fetch(`/learn/docs/file/${d.id}`);
     const data = await res.json();
     document.getElementById('docTitle').value = d.name;
-    document.getElementById('docContent').value = data.content;
-    if (typeof autoResize === 'function') autoResize(document.getElementById('docContent'));
+    const docEl2 = document.getElementById('docContent');
+    if (docEl2) docEl2.innerHTML = data.content || '';
+    if (typeof autoResize === 'function') autoResize(docEl2);
     document.getElementById('saveDocBtn').dataset.current = d.id;
   });
   // double-click anywhere on the row to rename (except action icons)
@@ -123,7 +173,7 @@ function makeItem(d){
     const current = document.getElementById('saveDocBtn').dataset.current;
     if (current === d.id) {
       document.getElementById('docTitle').value='';
-      document.getElementById('docContent').value='';
+      const docElClear = document.getElementById('docContent'); if (docElClear) docElClear.innerHTML = '';
       document.getElementById('saveDocBtn').dataset.current = '';
     }
     loadList();
@@ -170,7 +220,7 @@ document.getElementById('createDocBtn').addEventListener('click', async ()=>{
 document.getElementById('saveDocBtn').addEventListener('click', async ()=>{
   const id = document.getElementById('saveDocBtn').dataset.current;
   const name = document.getElementById('docTitle').value || 'Untitled';
-  const content = document.getElementById('docContent').value || '';
+  const content = (document.getElementById('docContent') && document.getElementById('docContent').innerHTML) || '';
   if (!id){
     const res = await fetch('/learn/docs/file', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name, content:content})});
     const newEntry = await res.json();
@@ -192,22 +242,16 @@ loadList();
 // Preview: render URLs as clickable links
 document.getElementById('previewBtn').addEventListener('click', ()=>{
   const preview = document.getElementById('previewArea');
-  const content = document.getElementById('docContent').value || '';
+  const docEl = document.getElementById('docContent');
+  const content = docEl ? docEl.innerHTML : '';
   if (preview.style.display === 'none' || preview.style.display === ''){
-    // convert URLs to anchors
-    const escaped = content
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\n/g, '<br>');
-    const linked = escaped.replace(/(https?:\/\/[^\s<>]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
-    preview.innerHTML = linked;
+    preview.innerHTML = sanitizePreviewHtml(content);
     preview.style.display = 'block';
-    document.getElementById('docContent').style.display = 'none';
+    if (docEl) docEl.style.display = 'none';
     document.getElementById('previewBtn').textContent = 'Edit';
   } else {
     preview.style.display = 'none';
-    document.getElementById('docContent').style.display = '';
+    if (docEl) docEl.style.display = '';
     document.getElementById('previewBtn').textContent = 'Preview';
   }
 });
@@ -231,6 +275,144 @@ if (docEl){
   // ensure initial size matches any existing content
   autoResize(docEl);
 }
+
+// --- Editor toolbar functionality (WYSIWYG using execCommand) ---
+function applyCommand(cmd, value=null){
+  document.execCommand(cmd, false, value);
+  if (docEl) { autoResize(docEl); docEl.focus(); }
+}
+
+// wrap current selection with a span that has the provided inline style
+function wrapSelectionWithSpan(style){
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  // if collapsed caret, insert an empty span and place caret inside
+  if (range.collapsed){
+    const span = document.createElement('span');
+    span.setAttribute('style', style);
+    span.innerHTML = '\u00A0';
+    range.insertNode(span);
+    // place caret after the inserted space
+    sel.removeAllRanges();
+    const r2 = document.createRange();
+    r2.setStartAfter(span);
+    r2.collapse(true);
+    sel.addRange(r2);
+    if (docEl) autoResize(docEl);
+    return;
+  }
+  const content = range.extractContents();
+  const span = document.createElement('span');
+  span.setAttribute('style', style);
+  span.appendChild(content);
+  range.insertNode(span);
+  // reselect inserted node
+  sel.removeAllRanges();
+  const r3 = document.createRange();
+  r3.selectNodeContents(span);
+  sel.addRange(r3);
+  if (docEl) autoResize(docEl);
+}
+
+document.getElementById('fmtBold').addEventListener('click', ()=> applyCommand('bold'));
+document.getElementById('fmtItalic').addEventListener('click', ()=> applyCommand('italic'));
+
+document.getElementById('fmtFontFamily').addEventListener('change', (e)=>{
+  const val = e.target.value;
+  if (!val) return;
+  wrapSelectionWithSpan('font-family: '+val+'; font-size:11px;');
+  e.target.selectedIndex = 0;
+});
+
+document.getElementById('fmtFontSize').addEventListener('change', (e)=>{
+  const sz = e.target.value;
+  if (!sz) return;
+  wrapSelectionWithSpan('font-size: '+sz+'px;');
+  e.target.selectedIndex = 3; // reset to 11 (index may vary)
+});
+
+document.getElementById('fmtColor').addEventListener('click', ()=> document.getElementById('colorPicker').click());
+document.getElementById('colorPicker').addEventListener('change', (e)=>{
+  const color = e.target.value;
+  const dot = document.getElementById('colorDot'); if (dot) dot.style.background = color;
+  wrapSelectionWithSpan('color: '+color+';');
+});
+
+// highlight popover logic: show/hide and apply color from swatches
+const highlightBtn = document.getElementById('fmtHighlight');
+const highlightPopover = document.getElementById('highlightPopover');
+if (highlightBtn && highlightPopover){
+  highlightBtn.addEventListener('click', (ev)=>{
+    ev.stopPropagation();
+    highlightPopover.style.display = highlightPopover.style.display === 'flex' ? 'none' : 'flex';
+  });
+  // click outside closes popover
+  document.addEventListener('click', ()=>{ if (highlightPopover) highlightPopover.style.display='none'; });
+  highlightPopover.addEventListener('click', (ev)=>{ ev.stopPropagation(); });
+  // swatches
+  document.querySelectorAll('#highlightPopover .color-swatch').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const c = btn.dataset.color;
+      wrapSelectionWithSpan('background-color: '+c+'; padding:0 0.1rem;');
+      highlightPopover.style.display='none';
+    });
+  });
+}
+
+function showLinkPopover(){
+  const toolbar = document.getElementById('editorToolbar');
+  const existing = document.getElementById('linkPopover'); if (existing) existing.remove();
+  const pop = document.createElement('div'); pop.id='linkPopover';
+  pop.style.position='absolute'; pop.style.background='var(--bg-primary)'; pop.style.border='1px solid var(--border)'; pop.style.padding='6px'; pop.style.display='flex'; pop.style.gap='6px'; pop.style.zIndex='40';
+  const input = document.createElement('input'); input.type='text'; input.placeholder='https://example.com'; input.style.width='220px'; input.style.padding='0.25rem';
+  const ok = document.createElement('button'); ok.className='btn'; ok.textContent='OK';
+  const cancel = document.createElement('button'); cancel.className='btn btn-secondary'; cancel.textContent='×';
+  pop.appendChild(input); pop.appendChild(ok); pop.appendChild(cancel);
+  const rect = toolbar.getBoundingClientRect(); pop.style.left = Math.max(8, rect.left) + 'px'; pop.style.top = (rect.bottom + 6) + 'px';
+  document.body.appendChild(pop); input.focus();
+  function cleanup(){ if(pop) pop.remove(); }
+  cancel.addEventListener('click', cleanup);
+  ok.addEventListener('click', ()=>{
+    const url = (input.value||'').trim(); if (!url) return cleanup();
+    const finalUrl = /^(https?:\/\/)/i.test(url) ? url : ('https://'+url);
+    applyCommand('createLink', finalUrl);
+    cleanup();
+  });
+}
+document.getElementById('fmtLink').addEventListener('click', showLinkPopover);
+
+function sanitizePreviewHtml(html){
+  if (!html) return '';
+  let s = html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
+  s = s.replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  s = s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const allowed = ['a','span','strong','em','b','i','p','br','div','ul','ol','li','h1','h2','h3','h4','h5','h6'];
+  allowed.forEach(tag=>{
+    const reOpen = new RegExp('&lt;('+tag+'\\b[^&gt;]*)&gt;','gi');
+    s = s.replace(reOpen,'<$1>');
+    const reClose = new RegExp('&lt;\\/'+tag+'&gt;','gi');
+    s = s.replace(reClose,'</'+tag+'>');
+  });
+  s = s.replace(/<a\s+([^>]*?)href=(['"])([^'">]+)\2([^>]*)>/gi, '<a $1href="$3" target="_blank" rel="noopener noreferrer"$4>');
+  return s;
+}
+
+document.getElementById('previewBtn').addEventListener('click', ()=>{
+  const preview = document.getElementById('previewArea');
+  const docEl = document.getElementById('docContent');
+  const content = docEl ? docEl.innerHTML : '';
+  if (preview.style.display === 'none' || preview.style.display === ''){
+    preview.innerHTML = sanitizePreviewHtml(content);
+    preview.style.display = 'block';
+    if (docEl) docEl.style.display = 'none';
+    document.getElementById('previewBtn').textContent = 'Edit';
+  } else {
+    preview.style.display = 'none';
+    if (docEl) docEl.style.display = '';
+    document.getElementById('previewBtn').textContent = 'Preview';
+  }
+});
 </script>
 
 {% endblock %}
