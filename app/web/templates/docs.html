@@ -63,6 +63,8 @@ function makeItem(d){
     const data = await res.json();
     document.getElementById('docTitle').value = d.name;
     document.getElementById('docContent').value = data.content;
+    // auto-resize editor to fit loaded content
+    if (typeof autoResize === 'function') autoResize(document.getElementById('docContent'));
     document.getElementById('saveDocBtn').dataset.current = d.id;
   });
   // allow clicking anywhere on the row (except action buttons) to select the file
@@ -74,6 +76,7 @@ function makeItem(d){
     const data = await res.json();
     document.getElementById('docTitle').value = d.name;
     document.getElementById('docContent').value = data.content;
+    if (typeof autoResize === 'function') autoResize(document.getElementById('docContent'));
     document.getElementById('saveDocBtn').dataset.current = d.id;
   });
   // double-click anywhere on the row to rename (except action icons)
@@ -208,6 +211,26 @@ document.getElementById('previewBtn').addEventListener('click', ()=>{
     document.getElementById('previewBtn').textContent = 'Preview';
   }
 });
+
+// Auto-resize helper: expands textarea height to fit content on input/paste/load
+function autoResize(el){
+  if (!el) return;
+  el.style.height = 'auto';
+  let desired = el.scrollHeight;
+  const rect = el.getBoundingClientRect();
+  const maxAvailable = window.innerHeight - rect.top - 40; // keep some bottom padding
+  if (maxAvailable > 120) desired = Math.min(desired, maxAvailable);
+  el.style.height = desired + 'px';
+}
+
+const docEl = document.getElementById('docContent');
+if (docEl){
+  docEl.addEventListener('input', ()=> autoResize(docEl));
+  docEl.addEventListener('paste', ()=> setTimeout(()=> autoResize(docEl), 50));
+  window.addEventListener('resize', ()=> autoResize(docEl));
+  // ensure initial size matches any existing content
+  autoResize(docEl);
+}
 </script>
 
 {% endblock %}
