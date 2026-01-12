@@ -1,33 +1,43 @@
 {% extends "base.html" %}
 {% block content %}
 <div style="display:flex; gap:1.5rem;">
-  <aside style="width: 380px;">
+  <aside style="position:fixed; left:0; top:64px; bottom:0; width:30%; min-width:240px; overflow:auto; padding:1.5rem; box-sizing:border-box;">
     <div class="card">
       <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.75rem;">
         <h3 class="futuristic-title" style="margin:0; font-size:1rem; flex:1">Docs</h3>
         <input id="newDocName" placeholder="New file name" style="padding:0.35rem 0.5rem; border:1px solid var(--border); width:160px;">
         <button id="createDocBtn" class="btn">New</button>
       </div>
-      <div id="docsList" style="display:flex; flex-direction:column; gap:0.5rem; max-height:60vh; overflow:auto;"></div>
+      <div id="docsList" style="display:flex; flex-direction:column; gap:0.5rem; max-height:70vh; overflow:auto;"></div>
     </div>
   </aside>
 
-  <section style="flex:1;">
+  <section style="flex:1; margin-left:30%; padding:1.5rem; box-sizing:border-box;">
     <div class="card" style="position:relative;">
       <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;">
         <h3 style="margin-top:0; margin-bottom:0.5rem; flex:1">Editor</h3>
         <div style="display:flex; gap:0.5rem;">
-          <button id="deleteDocBtn" class="btn btn-secondary">Delete</button>
-          <button id="renameDocBtn" class="btn btn-secondary">Rename</button>
           <button id="saveDocBtn" class="btn">Save</button>
+          <button id="previewBtn" class="btn btn-secondary">Preview</button>
         </div>
       </div>
       <input id="docTitle" placeholder="Document title" style="width:100%; padding:0.5rem; margin:0.5rem 0 0.75rem 0; border:1px solid var(--border);">
-      <textarea id="docContent" style="width:100%; height:60vh; padding:1rem; border:1px solid var(--border); font-family:JetBrains Mono, monospace;"></textarea>
+      <textarea id="docContent" style="width:100%; height:75vh; padding:1rem; border:1px solid var(--border); font-family:JetBrains Mono, monospace;"></textarea>
+      <div id="previewArea" style="display:none; margin-top:0.75rem; padding:1rem; border:1px solid var(--border); background:var(--bg-primary);"></div>
     </div>
   </section>
 </div>
 
+<style>
+  .doc-item { transition: background 0.12s ease; }
+  /* Light-mode hover (default): slightly darker to be visible on light backgrounds */
+  .doc-item:hover { background: rgba(0,0,0,0.04); cursor: pointer; }
+  .item-actions { display:inline-flex; gap:6px; align-items:center; opacity:0; transform:translateX(6px); transition:opacity .12s ease, transform .12s ease; }
+  .doc-item:hover .item-actions { opacity:1; transform:translateX(0); }
+  .item-actions button { border-radius:4px; padding:4px; }
+  /* Dark-mode override: subtle light hover */
+  [data-theme="dark"] .doc-item:hover { background: rgba(255,255,255,0.02); }
+</style>
 <script>
 async function fetchFiles(){
   const res = await fetch('/learn/docs/files');
@@ -36,6 +46,7 @@ async function fetchFiles(){
 
 function makeItem(d){
   const el = document.createElement('div');
+  el.className = 'doc-item';
   el.style.display = 'flex';
   el.style.justifyContent = 'space-between';
   el.style.alignItems = 'center';
@@ -53,34 +64,23 @@ function makeItem(d){
     document.getElementById('docTitle').value = d.name;
     document.getElementById('docContent').value = data.content;
     document.getElementById('saveDocBtn').dataset.current = d.id;
-    document.getElementById('deleteDocBtn').dataset.current = d.id;
-    document.getElementById('renameDocBtn').dataset.current = d.id;
   });
-  el.appendChild(a);
-  const actions = document.createElement('div');
-  // small inline delete button for list items
-  const del = document.createElement('button');
-  del.className = 'btn btn-secondary';
-  del.textContent = 'Del';
-  del.addEventListener('click', async ()=>{
-    await fetch(`/learn/docs/file/${d.id}`, {method:'DELETE'});
-    // if deleting currently open doc, clear editor
-    const current = document.getElementById('saveDocBtn').dataset.current;
-    if (current === d.id) {
-      document.getElementById('docTitle').value='';
-      document.getElementById('docContent').value='';
-      document.getElementById('saveDocBtn').dataset.current = '';
-    }
-    loadList();
+  // allow clicking anywhere on the row (except action buttons) to select the file
+  el.addEventListener('click', async (e)=>{
+    // if click originated inside action buttons, ignore here
+    if (e.target.closest && e.target.closest('.item-actions')) return;
+    e.preventDefault();
+    const res = await fetch(`/learn/docs/file/${d.id}`);
+    const data = await res.json();
+    document.getElementById('docTitle').value = d.name;
+    document.getElementById('docContent').value = data.content;
+    document.getElementById('saveDocBtn').dataset.current = d.id;
   });
-  actions.appendChild(del);
-  // inline rename button for list items
-  const ren = document.createElement('button');
-  ren.className = 'btn btn-secondary';
-  ren.textContent = 'Ren';
-  ren.style.marginLeft = '0.25rem';
-  ren.addEventListener('click', ()=>{
-    // replace link with inline input
+  // double-click anywhere on the row to rename (except action icons)
+  el.addEventListener('dblclick', (e)=>{
+    if (e.target.closest && e.target.closest('.item-actions')) return;
+    e.stopPropagation();
+    e.preventDefault();
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
     nameInput.value = a.textContent;
@@ -94,15 +94,53 @@ function makeItem(d){
         .then(res=>res.json())
         .then(async (entry)=>{
           await loadList();
-          // select renamed file
           const anchors = document.querySelectorAll('#docsList a');
           anchors.forEach(a2=>{ if (a2.textContent === entry.name) a2.click(); });
         });
     }
-    nameInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') finishRename(); });
+    nameInput.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter') finishRename(); });
     nameInput.addEventListener('blur', finishRename);
   });
-  actions.appendChild(ren);
+  el.appendChild(a);
+  const actions = document.createElement('div');
+  actions.className = 'item-actions';
+  // delete icon button
+  const del = document.createElement('button');
+  del.className = 'btn btn-secondary';
+  del.title = 'Delete';
+  del.style.display = 'inline-flex';
+  del.style.alignItems = 'center';
+  del.style.justifyContent = 'center';
+  del.style.width = '34px';
+  del.style.height = '28px';
+  del.style.padding = '0';
+  del.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
+  del.addEventListener('click', async ()=>{
+    await fetch(`/learn/docs/file/${d.id}`, {method:'DELETE'});
+    const current = document.getElementById('saveDocBtn').dataset.current;
+    if (current === d.id) {
+      document.getElementById('docTitle').value='';
+      document.getElementById('docContent').value='';
+      document.getElementById('saveDocBtn').dataset.current = '';
+    }
+    loadList();
+  });
+  actions.appendChild(del);
+  // rename handled via double-click inline; remove dedicated rename icon
+  // start hidden by default; reveal on hover via JS to avoid stylesheet conflicts
+  actions.style.opacity = '0';
+  actions.style.transform = 'translateX(6px)';
+  actions.style.pointerEvents = 'none';
+  el.addEventListener('mouseenter', ()=>{
+    actions.style.opacity = '1';
+    actions.style.transform = 'translateX(0)';
+    actions.style.pointerEvents = 'auto';
+  });
+  el.addEventListener('mouseleave', ()=>{
+    actions.style.opacity = '0';
+    actions.style.transform = 'translateX(6px)';
+    actions.style.pointerEvents = 'none';
+  });
   el.appendChild(actions);
   return el;
 }
@@ -142,27 +180,34 @@ document.getElementById('saveDocBtn').addEventListener('click', async ()=>{
   await loadList();
 });
 
-document.getElementById('renameDocBtn').addEventListener('click', async ()=>{
-  const id = document.getElementById('renameDocBtn').dataset.current;
-  if (!id) return;
-  const name = document.getElementById('docTitle').value || 'Untitled';
-  await fetch(`/learn/docs/file/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name})});
-  await loadList();
-});
+// link UI removed per user request
 
-document.getElementById('deleteDocBtn').addEventListener('click', async ()=>{
-  const id = document.getElementById('deleteDocBtn').dataset.current;
-  if (!id) return;
-  await fetch(`/learn/docs/file/${id}`, {method:'DELETE'});
-  await loadList();
-  document.getElementById('docTitle').value='';
-  document.getElementById('docContent').value='';
-  document.getElementById('saveDocBtn').dataset.current = '';
-  document.getElementById('deleteDocBtn').dataset.current = '';
-  document.getElementById('renameDocBtn').dataset.current = '';
-});
+// delete and rename are handled via left-panel controls; editor buttons removed
 
 loadList();
+
+// Preview: render URLs as clickable links
+document.getElementById('previewBtn').addEventListener('click', ()=>{
+  const preview = document.getElementById('previewArea');
+  const content = document.getElementById('docContent').value || '';
+  if (preview.style.display === 'none' || preview.style.display === ''){
+    // convert URLs to anchors
+    const escaped = content
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+    const linked = escaped.replace(/(https?:\/\/[^\s<>]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    preview.innerHTML = linked;
+    preview.style.display = 'block';
+    document.getElementById('docContent').style.display = 'none';
+    document.getElementById('previewBtn').textContent = 'Edit';
+  } else {
+    preview.style.display = 'none';
+    document.getElementById('docContent').style.display = '';
+    document.getElementById('previewBtn').textContent = 'Preview';
+  }
+});
 </script>
 
 {% endblock %}
