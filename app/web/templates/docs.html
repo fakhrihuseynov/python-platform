@@ -18,21 +18,21 @@
         <h3 style="margin-top:0; margin-bottom:0.5rem; flex:1">Editor</h3>
         <div style="display:flex; gap:0.5rem; align-items:center;">
           <!-- toolbar inline with Save. Also create a fixed-left toolbar so it's ~20-30% from left edge -->
-          <div id="editorToolbar" style="display:flex; gap:8px; align-items:center; position:relative; left:auto; top:auto; z-index:auto;">
+          <div id="editorToolbar" style="display:flex; gap:8px; align-items:center; position:relative; left:auto; top:auto; z-index:auto; margin-right:2rem;">
             <button class="btn" title="Bold" id="fmtBold" style="width:34px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h7a3 3 0 0 1 0 6H6z"></path><path d="M6 10h8a3 3 0 0 1 0 6H6z"></path></svg>
             </button>
             <button class="btn" title="Italic" id="fmtItalic" style="width:34px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>
             </button>
-            <select id="fmtFontFamily" title="Font family" style="height:30px; padding:0 6px; font-size:12px; vertical-align:middle;">
+            <select id="fmtFontFamily" title="Font family" style="height:30px; padding:0 6px; font-size:12px; border:1px solid var(--border); background:var(--bg-primary); color:var(--text-primary); border-radius:4px; display:inline-flex; align-items:center; vertical-align:middle;">
               <option value="" selected>Font</option>
               <option value="Udemy Sans">Udemy Sans</option>
               <option value="Noto Sans JP">Noto Sans JP</option>
               <option value="Vazirmatn">Vazirmatn</option>
               <option value="SF Pro Text">SF Pro Text</option>
             </select>
-            <select id="fmtFontSize" title="Font size" style="height:30px; padding:0 6px; font-size:12px; vertical-align:middle;">
+            <select id="fmtFontSize" title="Font size" style="height:30px; padding:0 6px; font-size:12px; border:1px solid var(--border); background:var(--bg-primary); color:var(--text-primary); border-radius:4px; display:inline-flex; align-items:center; vertical-align:middle;">
               <option value="8">8</option>
               <option value="9">9</option>
               <option value="10">10</option>
@@ -107,27 +107,45 @@ function makeItem(d){
   a.style.color = 'var(--text-primary)';
   a.addEventListener('click', async (e)=>{
     e.preventDefault();
+    if (window.docContentObserver) window.docContentObserver.disconnect();
     const res = await fetch(`/learn/docs/file/${d.id}`);
     const data = await res.json();
     document.getElementById('docTitle').value = d.name;
     const docEl = document.getElementById('docContent');
     if (docEl) docEl.innerHTML = data.content || '';
+    dirty = false;
+    currentDocId = d.id;
+    currentSnapshot = docEl ? docEl.innerHTML : '';
     // auto-resize editor to fit loaded content
     if (typeof autoResize === 'function') autoResize(docEl);
     document.getElementById('saveDocBtn').dataset.current = d.id;
+    setTimeout(()=>{
+      if (window.docContentObserver && docEl){
+        window.docContentObserver.observe(docEl, {subtree:true, characterData:true, childList:true});
+      }
+    }, 100);
   });
   // allow clicking anywhere on the row (except action buttons) to select the file
   el.addEventListener('click', async (e)=>{
     // if click originated inside action buttons, ignore here
     if (e.target.closest && e.target.closest('.item-actions')) return;
     e.preventDefault();
+    if (window.docContentObserver) window.docContentObserver.disconnect();
     const res = await fetch(`/learn/docs/file/${d.id}`);
     const data = await res.json();
     document.getElementById('docTitle').value = d.name;
     const docEl2 = document.getElementById('docContent');
     if (docEl2) docEl2.innerHTML = data.content || '';
+    dirty = false;
+    currentDocId = d.id;
+    currentSnapshot = docEl2 ? docEl2.innerHTML : '';
     if (typeof autoResize === 'function') autoResize(docEl2);
     document.getElementById('saveDocBtn').dataset.current = d.id;
+    setTimeout(()=>{
+      if (window.docContentObserver && docEl2){
+        window.docContentObserver.observe(docEl2, {subtree:true, characterData:true, childList:true});
+      }
+    }, 100);
   });
   // double-click anywhere on the row to rename (except action icons)
   el.addEventListener('dblclick', (e)=>{
@@ -270,7 +288,23 @@ function autoResize(el){
 const docEl = document.getElementById('docContent');
 if (docEl){
   docEl.addEventListener('input', ()=> autoResize(docEl));
-  docEl.addEventListener('paste', ()=> setTimeout(()=> autoResize(docEl), 50));
+  // Strip formatting on paste and apply default styles
+  docEl.addEventListener('paste', (e)=> {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0){
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      const textNode = document.createTextNode(text);
+      range.insertNode(textNode);
+      range.setStartAfter(textNode);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    setTimeout(()=> autoResize(docEl), 50);
+  });
   window.addEventListener('resize', ()=> autoResize(docEl));
   // ensure initial size matches any existing content
   autoResize(docEl);
@@ -339,21 +373,23 @@ document.getElementById('fmtItalic').addEventListener('click', ()=> applyCommand
 
 document.getElementById('fmtFontFamily').addEventListener('mousedown', ()=> saveSelection());
 document.getElementById('fmtFontFamily').addEventListener('change', (e)=>{
-  restoreSelection();
   const val = e.target.value;
   if (!val) return;
-  wrapSelectionWithSpan('font-family: '+val+'; font-size:11px;');
+  restoreSelection();
+  wrapSelectionWithSpan('font-family: '+val+';');
   e.target.selectedIndex = 0;
+  if (docEl) docEl.focus();
 });
 
 document.getElementById('fmtFontSize').addEventListener('mousedown', ()=> saveSelection());
 document.getElementById('fmtFontSize').addEventListener('change', (e)=>{
-  restoreSelection();
   const sz = e.target.value;
   if (!sz) return;
+  restoreSelection();
   wrapSelectionWithSpan('font-size: '+sz+'px;');
   // keep 11 selected visually
   e.target.value = '11';
+  if (docEl) docEl.focus();
 });
 
 // color picker now uses an OK/Cancel popover to approve color before applying
@@ -400,14 +436,17 @@ if (highlightBtn && highlightPopover){
   document.querySelectorAll('#highlightPopover .color-swatch').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const c = btn.dataset.color;
-      restoreSelection();
-      wrapSelectionWithSpan('background-color: '+c+'; padding:0 0.1rem;');
+      if (restoreSelection()){
+        wrapSelectionWithSpan('background-color: '+c+'; padding:0 0.1rem;');
+      }
       highlightPopover.style.display='none';
+      if (docEl) docEl.focus();
     });
   });
 }
 
 function showLinkPopover(){
+  saveSelection();
   const toolbar = document.getElementById('editorToolbar');
   const existing = document.getElementById('linkPopover'); if (existing) existing.remove();
   const pop = document.createElement('div'); pop.id='linkPopover';
@@ -423,6 +462,7 @@ function showLinkPopover(){
   ok.addEventListener('click', ()=>{
     const url = (input.value||'').trim(); if (!url) return cleanup();
     const finalUrl = /^(https?:\/\/)/i.test(url) ? url : ('https://'+url);
+    restoreSelection();
     applyCommand('createLink', finalUrl);
     cleanup();
   });
@@ -503,10 +543,18 @@ async function attemptLoadFile(id, name){
 async function loadFileById(id){
   const res = await fetch(`/learn/docs/file/${id}`);
   const data = await res.json();
+  // Temporarily disconnect observer to prevent false dirty flags during load
+  if (window.docContentObserver) window.docContentObserver.disconnect();
   document.getElementById('docTitle').value = data.name || '';
   const docEl = document.getElementById('docContent'); if (docEl) docEl.innerHTML = data.content || '';
   setCurrentSnapshot();
   document.getElementById('saveDocBtn').dataset.current = id;
+  // Reconnect observer after load completes
+  setTimeout(()=>{
+    if (window.docContentObserver && docEl){
+      window.docContentObserver.observe(docEl, {subtree:true, characterData:true, childList:true});
+    }
+  }, 100);
 }
 
 // wire clicks on left-panel anchors to attemptLoadFile instead of direct load
@@ -523,9 +571,9 @@ document.addEventListener('click', (ev)=>{
 });
 
 // ensure content edits set dirty
-const docContentObserver = new MutationObserver(()=>{ markDirty(); });
+window.docContentObserver = new MutationObserver(()=>{ markDirty(); });
 const docElRef = document.getElementById('docContent');
-if (docElRef) docContentObserver.observe(docElRef, {subtree:true, characterData:true, childList:true});
+if (docElRef) window.docContentObserver.observe(docElRef, {subtree:true, characterData:true, childList:true});
 
 // Preview button (uses sanitizer)
 document.getElementById('previewBtn').addEventListener('click', ()=>{
@@ -543,6 +591,22 @@ document.getElementById('previewBtn').addEventListener('click', ()=>{
     document.getElementById('previewBtn').textContent = 'Preview';
   }
 });
+
+// Guard navigation links in menu if there are unsaved changes
+document.addEventListener('click', (ev)=>{
+  const navLink = ev.target.closest && ev.target.closest('.nav-links a');
+  if (navLink && dirty){
+    ev.preventDefault();
+    showUnsavedModal(async ()=>{ // save then navigate
+      await document.getElementById('saveDocBtn').click();
+      dirty = false;
+      window.location.href = navLink.href;
+    }, ()=>{ // discard and navigate
+      dirty = false;
+      window.location.href = navLink.href;
+    }, ()=>{ /* cancel - stay on page */ });
+  }
+}, true);
 </script>
 
 {% endblock %}
