@@ -8,3 +8,8 @@ bp = Blueprint("learn", __name__)
 def list_lessons():
     lessons = get_lessons()
     return render_template("learn.html", lessons=lessons)
+
+
+@bp.route('/docs')
+def docs_index():
+    return render_template('docs.html')
