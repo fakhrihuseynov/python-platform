@@ -1,5 +1,6 @@
 /* Professional PyCoach Design - Light & Dark Modes */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap');
 
 :root {
   /* Light Mode Colors */
@@ -80,6 +81,13 @@ body {
   margin-left: 170px;
 }
 
+/* Ensure nav children align and keep same height as anchors */
+.nav-links > * {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
 .nav a {
   color: var(--text-primary);
   text-decoration: none;
@@ -94,6 +102,81 @@ body {
   height: 100%;
   display: flex;
   align-items: center;
+}
+
+/* Header buttons: use futuristic font to match titles */
+.nav a,
+.nav .btn,
+.theme-toggle {
+  font-family: 'Orbitron', 'Inter', sans-serif;
+  letter-spacing: 0.6px;
+  text-transform: none;
+}
+
+/* Learn submenu styles */
+.nav-submenu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.submenu-button {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-primary);
+  padding: 2rem 3.25rem; /* match .nav a */
+  cursor: pointer;
+  font-family: 'Orbitron', 'Inter', sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.6px;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+/* Hover should mirror .nav a hover so position/flow doesn't change visually */
+.submenu-button:hover {
+  background: var(--text-secondary);
+  color: var(--bg-primary);
+  text-decoration: none;
+}
+
+[data-theme="dark"] .submenu-button:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.submenu-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  display: none;
+  flex-direction: column;
+  z-index: 1200;
+  padding: 0.5rem 0;
+}
+
+.submenu-panel.open,
+.submenu-panel.open > a {
+  display: flex;
+}
+
+.submenu-panel a {
+  padding: 0.6rem 1rem;
+  color: var(--text-primary);
+  text-decoration: none;
+  display: none;
+  align-items: center;
+}
+
+.submenu-panel a:hover {
+  background: var(--bg-tertiary);
+  color: var(--primary);
 }
 
 .nav a:hover {
@@ -154,6 +237,17 @@ h1 {
   font-size: 2.5rem;
   font-weight: 700;
   color: var(--primary);
+  font-family: 'Orbitron', 'Inter', sans-serif; /* futuristic / robotic title */
+  letter-spacing: 0.8px;
+  text-transform: none;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.2);
+}
+
+/* Optional per-page title utility if you want to target only specific pages */
+.futuristic-title {
+  font-family: 'Orbitron', 'Inter', sans-serif;
+  letter-spacing: 0.8px;
+  font-weight: 700;
 }
 
 h2 { 

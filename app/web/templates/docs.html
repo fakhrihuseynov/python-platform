@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="display:flex; gap:1.5rem;">
+  <aside style="width: 320px;">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <h3 class="futuristic-title" style="margin:0; font-size:1rem;">Docs</h3>
+        <button id="newDocBtn" class="btn">New</button>
+      </div>
+      <div id="docsList" style="display:flex; flex-direction:column; gap:0.5rem; max-height:60vh; overflow:auto;"></div>
+    </div>
+  </aside>
+
+  <section style="flex:1;">
+    <div class="card">
+      <h3 style="margin-top:0;">Editor</h3>
+      <input id="docTitle" placeholder="Document title" style="width:100%; padding:0.5rem; margin-bottom:0.75rem; border:1px solid var(--border);">
+      <textarea id="docContent" style="width:100%; height:60vh; padding:1rem; border:1px solid var(--border); font-family:JetBrains Mono, monospace;"></textarea>
+      <div style="display:flex; gap:0.75rem; justify-content:flex-end; margin-top:0.75rem;">
+        <button id="deleteDocBtn" class="btn btn-secondary">Delete</button>
+        <button id="renameDocBtn" class="btn btn-secondary">Rename</button>
+        <button id="saveDocBtn" class="btn">Save</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+async function fetchFiles(){
+  const res = await fetch('/learn/docs/files');
+  return res.json();
+}
+
+function makeItem(d){
+  const el = document.createElement('div');
+  el.style.display = 'flex';
+  el.style.justifyContent = 'space-between';
+  el.style.alignItems = 'center';
+  el.style.padding = '0.5rem';
+  el.style.borderBottom = '1px solid var(--border)';
+  el.dataset.id = d.id;
+  const a = document.createElement('a');
+  a.href = '#';
+  a.textContent = d.name;
+  a.style.color = 'var(--text-primary)';
+  a.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    const res = await fetch(`/learn/docs/file/${d.id}`);
+    const data = await res.json();
+    document.getElementById('docTitle').value = d.name;
+    document.getElementById('docContent').value = data.content;
+    document.getElementById('saveDocBtn').dataset.current = d.id;
+    document.getElementById('deleteDocBtn').dataset.current = d.id;
+    document.getElementById('renameDocBtn').dataset.current = d.id;
+  });
+  el.appendChild(a);
+  const actions = document.createElement('div');
+  const del = document.createElement('button');
+  del.className = 'btn btn-secondary';
+  del.textContent = 'X';
+  del.addEventListener('click', async ()=>{
+    if (!confirm('Delete this doc?')) return;
+    await fetch(`/learn/docs/file/${d.id}`, {method:'DELETE'});
+    loadList();
+    document.getElementById('docTitle').value='';
+    document.getElementById('docContent').value='';
+  });
+  actions.appendChild(del);
+  el.appendChild(actions);
+  return el;
+}
+
+async function loadList(){
+  const list = document.getElementById('docsList');
+  list.innerHTML = '';
+  const files = await fetchFiles();
+  files.forEach(f=> list.appendChild(makeItem(f)));
+}
+
+document.getElementById('newDocBtn').addEventListener('click', async ()=>{
+  const name = prompt('New doc name') || 'Untitled';
+  const res = await fetch('/learn/docs/file', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name, content:''})});
+  const data = await res.json();
+  loadList();
+});
+
+document.getElementById('saveDocBtn').addEventListener('click', async ()=>{
+  const id = document.getElementById('saveDocBtn').dataset.current;
+  const name = document.getElementById('docTitle').value || 'Untitled';
+  const content = document.getElementById('docContent').value || '';
+  if (!id){
+    const res = await fetch('/learn/docs/file', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name, content:content})});
+    await res.json();
+    loadList();
+    return;
+  }
+  await fetch(`/learn/docs/file/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name, content:content})});
+  loadList();
+});
+
+document.getElementById('renameDocBtn').addEventListener('click', async ()=>{
+  const id = document.getElementById('renameDocBtn').dataset.current;
+  if (!id) return alert('Select a doc first');
+  const name = prompt('New name') || 'Untitled';
+  await fetch(`/learn/docs/file/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name})});
+  loadList();
+});
+
+document.getElementById('deleteDocBtn').addEventListener('click', async ()=>{
+  const id = document.getElementById('deleteDocBtn').dataset.current;
+  if (!id) return alert('Select a doc first');
+  if (!confirm('Delete this doc?')) return;
+  await fetch(`/learn/docs/file/${id}`, {method:'DELETE'});
+  loadList();
+  document.getElementById('docTitle').value='';
+  document.getElementById('docContent').value='';
+});
+
+loadList();
+</script>
+
+{% endblock %}
