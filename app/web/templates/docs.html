@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div style="display:flex; gap:1.5rem;">
-  <aside style="position:fixed; left:0; top:64px; bottom:0; width:30%; min-width:240px; overflow:auto; padding:1.5rem; box-sizing:border-box;">
+  <aside style="position:fixed; left:0; top:80px; bottom:0; width:30vw; min-width:240px; overflow:auto; padding:1.5rem; box-sizing:border-box;">
     <div class="card">
       <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.75rem;">
         <h3 class="futuristic-title" style="margin:0; font-size:1rem; flex:1">Docs</h3>
@@ -12,8 +12,8 @@
     </div>
   </aside>
 
-  <section style="flex:1; margin-left:30%; padding:1.5rem; box-sizing:border-box;">
-    <div class="card" style="position:relative;">
+  <section id="docsEditorSection" style="flex:1; padding:1.5rem; box-sizing:border-box; position:fixed; left:30vw; top:95px; right:0; bottom:0; overflow:auto;">
+    <div class="card" style="position:relative; margin:0;">
       <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;">
         <h3 style="margin-top:0; margin-bottom:0.5rem; flex:1">Editor</h3>
         <div style="display:flex; gap:0.5rem;">
