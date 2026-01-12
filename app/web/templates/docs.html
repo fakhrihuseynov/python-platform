@@ -18,21 +18,21 @@
         <h3 style="margin-top:0; margin-bottom:0.5rem; flex:1">Editor</h3>
         <div style="display:flex; gap:0.5rem; align-items:center;">
           <!-- toolbar inline with Save. Also create a fixed-left toolbar so it's ~20-30% from left edge -->
-          <div id="editorToolbar" style="display:flex; gap:8px; align-items:center; position:relative; left:auto; top:auto; z-index:auto; margin-right:2rem;">
+          <div id="editorToolbar" style="display:flex; gap:8px; align-items:center; position:relative; left:auto; top:auto; z-index:auto; margin-right:10rem;">
             <button class="btn" title="Bold" id="fmtBold" style="width:34px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h7a3 3 0 0 1 0 6H6z"></path><path d="M6 10h8a3 3 0 0 1 0 6H6z"></path></svg>
             </button>
             <button class="btn" title="Italic" id="fmtItalic" style="width:34px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>
             </button>
-            <select id="fmtFontFamily" title="Font family" style="height:30px; padding:0 6px; font-size:12px; border:1px solid var(--border); background:var(--bg-primary); color:var(--text-primary); border-radius:4px; display:inline-flex; align-items:center; vertical-align:middle;">
+            <select id="fmtFontFamily" title="Font family" style="height:30px; padding:0 6px; font-size:12px; border:1px solid var(--border); background:var(--bg-primary); color:var(--text-primary); border-radius:4px; display:inline-flex; align-items:center; vertical-align:middle; margin-top: 5%;">
               <option value="" selected>Font</option>
               <option value="Udemy Sans">Udemy Sans</option>
               <option value="Noto Sans JP">Noto Sans JP</option>
               <option value="Vazirmatn">Vazirmatn</option>
               <option value="SF Pro Text">SF Pro Text</option>
             </select>
-            <select id="fmtFontSize" title="Font size" style="height:30px; padding:0 6px; font-size:12px; border:1px solid var(--border); background:var(--bg-primary); color:var(--text-primary); border-radius:4px; display:inline-flex; align-items:center; vertical-align:middle;">
+            <select id="fmtFontSize" title="Font size" style="height:30px; padding:0 6px; font-size:12px; border:1px solid var(--border); background:var(--bg-primary); color:var(--text-primary); border-radius:4px; display:inline-flex; align-items:center; vertical-align:middle; margin-top: 5%;">
               <option value="8">8</option>
               <option value="9">9</option>
               <option value="10">10</option>
@@ -43,8 +43,8 @@
               <option value="18">18</option>
             </select>
             <button class="btn" id="fmtLink" title="Insert link" style="width:34px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
-              <!-- paperclip icon -->
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6.5 6.5 0 0 1-9.19-9.19l8.48-8.48a4.5 4.5 0 0 1 6.36 6.36L9.5 18.07a2.5 2.5 0 0 1-3.54-3.54l7.78-7.78"></path></svg>
+              <!-- link icon -->
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
             </button>
             <div style="position:relative;">
               <button class="btn" id="fmtHighlight" title="Highlight" style="width:34px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
@@ -52,6 +52,7 @@
               </button>
               <!-- highlight popover placeholder -->
               <div id="highlightPopover" style="display:none; position:absolute; top:36px; left:0; background:var(--bg-primary); border:1px solid var(--border); padding:6px; gap:6px; z-index:50; flex-direction:row;">
+                <button class="color-swatch" data-color="none" title="Remove highlight" style="width:22px; height:22px; border-radius:4px; border:1px solid #ddd; background:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:bold; color:#999;">×</button>
                 <button class="color-swatch" data-color="#fff475" style="width:22px; height:22px; border-radius:4px; border:1px solid #ddd; background:#fff475"></button>
                 <button class="color-swatch" data-color="#ff8a80" style="width:22px; height:22px; border-radius:4px; border:1px solid #ddd; background:#ff8a80"></button>
                 <button class="color-swatch" data-color="#a7c7ff" style="width:22px; height:22px; border-radius:4px; border:1px solid #ddd; background:#a7c7ff"></button>
@@ -63,7 +64,13 @@
             </button>
             <input type="color" id="colorPicker" style="display:none;" />
           </div>
-          <div style="display:flex; gap:0.5rem;">
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            <button id="undoBtn" class="btn" title="Undo" style="width:34px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"></path></svg>
+            </button>
+            <button id="redoBtn" class="btn" title="Redo" style="width:34px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"></path><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"></path></svg>
+            </button>
             <button id="saveDocBtn" class="btn">Save</button>
             <button id="previewBtn" class="btn btn-secondary">Preview</button>
           </div>
@@ -288,26 +295,81 @@ function autoResize(el){
 const docEl = document.getElementById('docContent');
 if (docEl){
   docEl.addEventListener('input', ()=> autoResize(docEl));
-  // Strip formatting on paste and apply default styles
+  // Preserve formatting on paste but normalize font sizes to 11px
   docEl.addEventListener('paste', (e)=> {
     e.preventDefault();
-    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    const html = (e.clipboardData || window.clipboardData).getData('text/html');
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0){
       const range = sel.getRangeAt(0);
       range.deleteContents();
-      const textNode = document.createTextNode(text);
-      range.insertNode(textNode);
-      range.setStartAfter(textNode);
-      range.collapse(true);
+      
+      if (html) {
+        // Create temp container to parse and normalize pasted HTML
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+        
+        // Aggressively remove problematic inline styles but keep bold/italic/color/links
+        temp.querySelectorAll('*').forEach(el => {
+          // Force font-size to 11px and remove font-family
+          el.style.fontSize = '11px';
+          el.style.fontFamily = '';
+          // Remove layout-breaking styles
+          el.style.position = '';
+          el.style.display = '';
+          el.style.float = '';
+          el.style.margin = '';
+          el.style.padding = '';
+          if (!el.tagName.match(/^(IMG|VIDEO|TABLE)$/i)) {
+            el.style.width = '';
+            el.style.height = '';
+            el.style.minWidth = '';
+            el.style.minHeight = '';
+            el.style.maxWidth = '';
+            el.style.maxHeight = '';
+          }
+          // Remove line-height and letter-spacing that can break layout
+          el.style.lineHeight = '';
+          el.style.letterSpacing = '';
+          el.style.textIndent = '';
+        });
+        
+        // Insert normalized content
+        const frag = document.createDocumentFragment();
+        while (temp.firstChild) {
+          frag.appendChild(temp.firstChild);
+        }
+        range.insertNode(frag);
+      } else {
+        // Fallback to plain text if no HTML
+        const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+        const textNode = document.createTextNode(text);
+        range.insertNode(textNode);
+        range.setStartAfter(textNode);
+      }
+      
+      range.collapse(false);
       sel.removeAllRanges();
       sel.addRange(range);
     }
-    setTimeout(()=> autoResize(docEl), 50);
+    setTimeout(()=> {
+      autoResize(docEl);
+      // Force focus back to ensure editor is active
+      docEl.focus();
+    }, 100);
   });
   window.addEventListener('resize', ()=> autoResize(docEl));
   // ensure initial size matches any existing content
   autoResize(docEl);
+  
+  // Ctrl+click on links to open in new tab
+  docEl.addEventListener('click', (e)=> {
+    if ((e.ctrlKey || e.metaKey) && e.target.tagName === 'A') {
+      e.preventDefault();
+      const url = e.target.href;
+      if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  });
 }
 
 // Selection preservation helpers: save selection before opening popovers and restore before applying
@@ -371,12 +433,46 @@ function wrapSelectionWithSpan(style){
 document.getElementById('fmtBold').addEventListener('click', ()=> applyCommand('bold'));
 document.getElementById('fmtItalic').addEventListener('click', ()=> applyCommand('italic'));
 
+// Undo/Redo handlers
+document.getElementById('undoBtn').addEventListener('click', ()=> {
+  document.execCommand('undo', false, null);
+  if (docEl) { autoResize(docEl); docEl.focus(); }
+});
+document.getElementById('redoBtn').addEventListener('click', ()=> {
+  document.execCommand('redo', false, null);
+  if (docEl) { autoResize(docEl); docEl.focus(); }
+});
+
 document.getElementById('fmtFontFamily').addEventListener('mousedown', ()=> saveSelection());
 document.getElementById('fmtFontFamily').addEventListener('change', (e)=>{
   const val = e.target.value;
   if (!val) return;
-  restoreSelection();
-  wrapSelectionWithSpan('font-family: '+val+';');
+  if (restoreSelection()) {
+    // For font-family, we need to remove existing font-family first
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      if (!range.collapsed) {
+        const content = range.extractContents();
+        // Strip font-family from all elements in selection
+        const temp = document.createElement('div');
+        temp.appendChild(content);
+        temp.querySelectorAll('*').forEach(el => el.style.fontFamily = '');
+        // Create new span with desired font-family
+        const span = document.createElement('span');
+        span.style.fontFamily = val;
+        span.style.fontSize = '11px';
+        while (temp.firstChild) span.appendChild(temp.firstChild);
+        range.insertNode(span);
+        // Reselect
+        sel.removeAllRanges();
+        const r = document.createRange();
+        r.selectNodeContents(span);
+        sel.addRange(r);
+        if (docEl) autoResize(docEl);
+      }
+    }
+  }
   e.target.selectedIndex = 0;
   if (docEl) docEl.focus();
 });
@@ -437,7 +533,12 @@ if (highlightBtn && highlightPopover){
     btn.addEventListener('click', ()=>{
       const c = btn.dataset.color;
       if (restoreSelection()){
-        wrapSelectionWithSpan('background-color: '+c+'; padding:0 0.1rem;');
+        if (c === 'none') {
+          // Remove highlight by wrapping with transparent background
+          document.execCommand('removeFormat', false, null);
+        } else {
+          wrapSelectionWithSpan('background-color: '+c+'; padding:0 0.1rem;');
+        }
       }
       highlightPopover.style.display='none';
       if (docEl) docEl.focus();
