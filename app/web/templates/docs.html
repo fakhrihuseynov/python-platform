@@ -5,10 +5,10 @@
     <div class="card">
       <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.75rem;">
         <h3 class="futuristic-title" style="margin:0; font-size:1rem; flex:1">Docs</h3>
-        <input id="newDocName" placeholder="New file name" style="padding:0.35rem 0.5rem; border:1px solid var(--border); width:160px;">
-        <button id="createDocBtn" class="btn">New</button>
+        <input id="newFolderName" placeholder="New folder name" style="padding:0.35rem 0.5rem; border:1px solid var(--border); width:160px;">
+        <button id="createFolderBtn" class="btn" title="Add folder">＋</button>
       </div>
-      <div id="docsList" style="display:flex; flex-direction:column; gap:0.5rem; max-height:70vh; overflow:auto;"></div>
+      <div id="foldersList" style="display:flex; flex-direction:column; gap:0.5rem; max-height:70vh; overflow:auto;"></div>
     </div>
   </aside>
 
@@ -122,47 +122,22 @@ function makeItem(d){
   a.href = '#';
   a.textContent = d.name;
   a.style.color = 'var(--text-primary)';
-  a.addEventListener('click', async (e)=>{
+  a.addEventListener('click', (e)=>{
     e.preventDefault();
-    if (window.docContentObserver) window.docContentObserver.disconnect();
-    const res = await fetch(`/learn/docs/file/${d.id}`);
-    const data = await res.json();
-    document.getElementById('docTitle').value = d.name;
-    const docEl = document.getElementById('docContent');
-    if (docEl) docEl.innerHTML = data.content || '';
-    dirty = false;
-    currentDocId = d.id;
-    currentSnapshot = docEl ? docEl.innerHTML : '';
-    // auto-resize editor to fit loaded content
-    if (typeof autoResize === 'function') autoResize(docEl);
-    document.getElementById('saveDocBtn').dataset.current = d.id;
-    setTimeout(()=>{
-      if (window.docContentObserver && docEl){
-        window.docContentObserver.observe(docEl, {subtree:true, characterData:true, childList:true});
-      }
-    }, 100);
+    attemptLoadFile(d.id, d.name);
+  });
+  // make draggable for folder moves
+  el.setAttribute('draggable','true');
+  el.addEventListener('dragstart', (ev)=>{
+    ev.dataTransfer.setData('text/plain', d.id);
+    ev.dataTransfer.effectAllowed = 'move';
   });
   // allow clicking anywhere on the row (except action buttons) to select the file
-  el.addEventListener('click', async (e)=>{
+  el.addEventListener('click', (e)=>{
     // if click originated inside action buttons, ignore here
     if (e.target.closest && e.target.closest('.item-actions')) return;
     e.preventDefault();
-    if (window.docContentObserver) window.docContentObserver.disconnect();
-    const res = await fetch(`/learn/docs/file/${d.id}`);
-    const data = await res.json();
-    document.getElementById('docTitle').value = d.name;
-    const docEl2 = document.getElementById('docContent');
-    if (docEl2) docEl2.innerHTML = data.content || '';
-    dirty = false;
-    currentDocId = d.id;
-    currentSnapshot = docEl2 ? docEl2.innerHTML : '';
-    if (typeof autoResize === 'function') autoResize(docEl2);
-    document.getElementById('saveDocBtn').dataset.current = d.id;
-    setTimeout(()=>{
-      if (window.docContentObserver && docEl2){
-        window.docContentObserver.observe(docEl2, {subtree:true, characterData:true, childList:true});
-      }
-    }, 100);
+    attemptLoadFile(d.id, d.name);
   });
   // double-click anywhere on the row to rename (except action icons)
   el.addEventListener('dblclick', (e)=>{
@@ -180,14 +155,15 @@ function makeItem(d){
       const newName = (nameInput.value || '').trim() || 'Untitled';
       fetch(`/learn/docs/file/${d.id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:newName})})
         .then(res=>res.json())
-        .then(async (entry)=>{n          // If this file is currently open, update the title input
+        .then(async (entry)=>{
+          // If this file is currently open, update the title input
           const currentOpenId = document.getElementById('saveDocBtn').dataset.current;
           if (currentOpenId === d.id) {
             document.getElementById('docTitle').value = entry.name;
           }
           await loadList();
-          const anchors = document.querySelectorAll('#docsList a');
-          anchors.forEach(a2=>{ if (a2.textContent === entry.name) a2.click(); });
+          // attempt to open the renamed file in UI
+          document.querySelectorAll('#foldersList a').forEach(a2=>{ if (a2.textContent === entry.name) a2.click(); });
         });
     }
     nameInput.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter') finishRename(); });
@@ -237,23 +213,131 @@ function makeItem(d){
   return el;
 }
 
-async function loadList(){
-  const list = document.getElementById('docsList');
-  list.innerHTML = '';
-  const files = await fetchFiles();
-  files.forEach(f=> list.appendChild(makeItem(f)));
+// Folder support: mapping persisted in localStorage under 'docs_folder_mapping' (fileId -> folderName)
+function loadFolderMapping(){
+  try{ return JSON.parse(localStorage.getItem('docs_folder_mapping')||'{}'); }catch(e){ return {}; }
+}
+function saveFolderMapping(map){ localStorage.setItem('docs_folder_mapping', JSON.stringify(map)); }
+function loadFolderNames(){
+  try{ return JSON.parse(localStorage.getItem('docs_folder_names')||'[]'); }catch(e){ return []; }
+}
+function saveFolderNames(list){ localStorage.setItem('docs_folder_names', JSON.stringify(list)); }
+
+function createFolderElement(folderName){
+  const wrap = document.createElement('div');
+  wrap.className = 'folder';
+  const header = document.createElement('div');
+  header.style.display='flex'; header.style.justifyContent='space-between'; header.style.alignItems='center'; header.style.padding='0.25rem 0';
+  const left = document.createElement('div'); left.style.display='flex'; left.style.alignItems='center';
+  // Use a simple caret span (not a blue button) and make the header pane clickable
+  const toggle = document.createElement('span'); toggle.className='folder-caret'; toggle.textContent = '▾'; toggle.style.marginRight='6px'; toggle.style.userSelect='none'; toggle.style.fontSize='12px';
+  const title = document.createElement('strong'); title.textContent = folderName; title.style.cursor='pointer';
+  left.appendChild(toggle); left.appendChild(title);
+  const right = document.createElement('div'); right.style.display='flex'; right.style.gap='6px';
+  const newBtn = document.createElement('button'); newBtn.className='btn'; newBtn.textContent='New'; newBtn.title='New file in '+folderName;
+  const renameBtn = document.createElement('button'); renameBtn.className='btn btn-secondary'; renameBtn.textContent='✎'; renameBtn.title='Rename folder';
+  const delBtn = document.createElement('button'); delBtn.className='btn btn-secondary'; delBtn.title='Delete folder';
+  // match file-item delete SVG for consistency
+  delBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
+  right.appendChild(newBtn); right.appendChild(renameBtn); right.appendChild(delBtn);
+  header.appendChild(left); header.appendChild(right);
+  wrap.appendChild(header);
+  const container = document.createElement('div'); container.className='folder-files'; container.style.display='flex'; container.style.flexDirection='column'; container.style.gap='4px'; container.style.padding='0 0 6px 2rem';
+  wrap.appendChild(container);
+
+  // toggle by clicking the header pane (ignore clicks on action buttons)
+  header.addEventListener('click', (e)=>{
+    if (right.contains(e.target)) return; // clicking action buttons should not toggle
+    const isHidden = container.style.display === 'none';
+    container.style.display = isHidden ? 'flex' : 'none';
+    // caret direction: down for open, right for closed
+    toggle.textContent = isHidden ? '▾' : '▸';
+  });
+
+  // new file in folder
+  newBtn.addEventListener('click', async ()=>{
+    const res = await fetch('/learn/docs/file', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:'Untitled', content:''})});
+    const ent = await res.json();
+    // assign to folder
+    const mapping = loadFolderMapping(); mapping[ent.id] = folderName; saveFolderMapping(mapping);
+    await loadList();
+    // open created file
+    setTimeout(()=>{ document.querySelectorAll('#foldersList a').forEach(a=>{ if (a.textContent === 'Untitled') a.click(); }); }, 200);
+  });
+
+  // rename folder (inline). Guard to avoid double-execution from Enter+blur.
+  renameBtn.addEventListener('click', ()=>{
+    const input = document.createElement('input'); input.type='text'; input.value = folderName; input.style.padding='4px'; input.style.width='140px';
+    header.replaceChild(input, left);
+    input.focus();
+    let finished = false;
+    function finish(){
+      if (finished) return; finished = true;
+      const newName = (input.value||'').trim() || folderName;
+      const names = loadFolderNames();
+      const idx = names.indexOf(folderName);
+      if (idx !== -1) names[idx] = newName;
+      else if (!names.includes(newName)) names.push(newName);
+      saveFolderNames(names);
+      try{ if (input.parentNode) header.replaceChild(left, input); }catch(e){}
+      loadList();
+    }
+    input.addEventListener('blur', finish);
+    input.addEventListener('keydown', (e)=>{ if (e.key==='Enter'){ e.preventDefault(); finish(); } });
+  });
+
+  // delete folder (move files to Unsorted)
+  delBtn.addEventListener('click', ()=>{
+    if (!confirm('Delete folder "'+folderName+'"? Files will move to Unsorted.')) return;
+    const mapping = loadFolderMapping();
+    Object.keys(mapping).forEach(k=>{ if (mapping[k] === folderName) mapping[k] = 'Unsorted'; });
+    saveFolderMapping(mapping);
+    const names = loadFolderNames().filter(n=>n!==folderName); saveFolderNames(names);
+    loadList();
+  });
+
+  // dragover/drop to accept file moves
+  container.addEventListener('dragover', (ev)=>{ ev.preventDefault(); ev.dataTransfer.dropEffect='move'; });
+  container.addEventListener('drop', (ev)=>{
+    ev.preventDefault(); const fid = ev.dataTransfer.getData('text/plain'); if (!fid) return;
+    const mapping = loadFolderMapping(); mapping[fid] = folderName; saveFolderMapping(mapping); loadList();
+  });
+
+  return {wrap, container, title};
 }
 
-document.getElementById('createDocBtn').addEventListener('click', async ()=>{
-  const nameEl = document.getElementById('newDocName');
-  const name = (nameEl.value || '').trim() || 'Untitled';
-  // create new doc in left panel
-  const res = await fetch('/learn/docs/file', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name, content:''})});
-  const data = await res.json();
-  nameEl.value = '';
-  await loadList();
-  // auto-select the created doc
-  document.querySelectorAll('#docsList a').forEach(a=>{ if (a.textContent === name) a.click(); });
+async function loadList(){
+  const foldersEl = document.getElementById('foldersList'); foldersEl.innerHTML = '';
+  const files = await fetchFiles();
+  const mapping = loadFolderMapping();
+  const names = loadFolderNames();
+  // ensure Unsorted always present
+  if (!names.includes('Unsorted')) names.unshift('Unsorted');
+  // build map folder->files
+  const map = {};
+  names.forEach(n=> map[n]=[]);
+  files.forEach(f=>{
+    const folder = mapping[f.id] || 'Unsorted'; if (!map[folder]) map[folder]=[]; map[folder].push(f);
+  });
+  // render folders in order
+  names.forEach(fn=>{
+    const {wrap, container, title} = createFolderElement(fn);
+    foldersEl.appendChild(wrap);
+    const list = map[fn]||[];
+    list.forEach(file=>{
+      const item = makeItem(file);
+      container.appendChild(item);
+    });
+  });
+  // store folder names in case new ones added
+  saveFolderNames(names);
+}
+
+// create folder button handler
+document.getElementById('createFolderBtn').addEventListener('click', ()=>{
+  const nameEl = document.getElementById('newFolderName');
+  const name = (nameEl.value||'').trim() || 'New Folder';
+  const names = loadFolderNames(); if (!names.includes(name)) names.push(name); saveFolderNames(names); nameEl.value=''; loadList();
 });
 
 document.getElementById('saveDocBtn').addEventListener('click', async ()=>{
@@ -706,7 +790,7 @@ async function loadFileById(id){
 
 // wire clicks on left-panel anchors to attemptLoadFile instead of direct load
 document.addEventListener('click', (ev)=>{
-  const a = ev.target.closest && ev.target.closest('#docsList a');
+  const a = ev.target.closest && ev.target.closest('#foldersList a');
   if (a){
     ev.preventDefault();
     // find file id by walking up

@@ -30,3 +30,4 @@ venv/
 data/*.jsonl
 data/*.yml
 data/*.json
+data/docs/*
