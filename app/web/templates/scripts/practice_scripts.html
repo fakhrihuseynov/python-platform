@@ -1,0 +1,168 @@
+<script>
+let pendingInputs = [];
+let collectedInputs = [];
+let currentInputIndex = 0;
+
+// Auto-pairing for the code editor: (), {}, [], "", ''
+(function() {
+  const editor = document.getElementById('code');
+  if (!editor) return;
+  const pairs = {
+    '(': ')',
+    '[': ']',
+    '{': '}',
+    '"': '"',
+    "'": "'"
+  };
+
+  editor.addEventListener('keydown', function(e) {
+    const val = editor.value;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+
+    // Opening chars: wrap selection or insert pair
+    if (pairs.hasOwnProperty(e.key)) {
+      e.preventDefault();
+      const close = pairs[e.key];
+      if (start !== end) {
+        const before = val.slice(0, start);
+        const selected = val.slice(start, end);
+        const after = val.slice(end);
+        editor.value = before + e.key + selected + close + after;
+        editor.selectionStart = start + 1;
+        editor.selectionEnd = end + 1;
+      } else {
+        const before = val.slice(0, start);
+        const after = val.slice(start);
+        editor.value = before + e.key + close + after;
+        editor.selectionStart = editor.selectionEnd = start + 1;
+      }
+      return;
+    }
+
+    // Closing chars: if next char is the same, move over it
+    const closers = Object.values(pairs);
+    if (closers.includes(e.key)) {
+      if (start === end && val[start] === e.key) {
+        e.preventDefault();
+        editor.selectionStart = editor.selectionEnd = start + 1;
+        return;
+      }
+    }
+
+    // Backspace: if deleting opening with immediate closer, remove both
+    if (e.key === 'Backspace') {
+      if (start === end && start > 0) {
+        const prev = val[start - 1];
+        const next = val[start];
+        if (pairs[prev] && pairs[prev] === next) {
+          e.preventDefault();
+          const before = val.slice(0, start - 1);
+          const after = val.slice(start + 1);
+          editor.value = before + after;
+          editor.selectionStart = editor.selectionEnd = start - 1;
+          return;
+        }
+      }
+    }
+  });
+})();
+
+document.getElementById('practiceForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const btn = document.getElementById('runBtn');
+  const code = document.getElementById('code').value;
+  
+  btn.textContent = 'Running...';
+  btn.classList.add('loading');
+  btn.disabled = true;
+  
+  // First, check if code needs inputs
+  fetch(window.location.pathname, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({code: code})
+  })
+  .then(r => r.text())
+  .then(html => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const resultPre = doc.querySelector('pre');
+    
+    if (resultPre) {
+      const text = resultPre.textContent;
+      
+      // Check if we need input
+      try {
+        const data = JSON.parse(text);
+        if (data.need_input) {
+          // Collect inputs from user
+          pendingInputs = data.prompts;
+          collectedInputs = [];
+          currentInputIndex = 0;
+          showInputModal();
+          return;
+        }
+      } catch (e) {
+        // Not JSON, just regular output
+      }
+    }
+    
+    // No inputs needed or result is ready, submit normally
+    btn.textContent = 'Run Code';
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    document.getElementById('user_inputs').value = '';
+    document.getElementById('practiceForm').submit();
+  });
+});
+
+function showInputModal() {
+  if (currentInputIndex >= pendingInputs.length) {
+    // All inputs collected, submit form with inputs
+    document.getElementById('user_inputs').value = JSON.stringify({values: collectedInputs});
+    document.getElementById('inputModal').style.display = 'none';
+    document.getElementById('practiceForm').submit();
+    return;
+  }
+  
+  const modal = document.getElementById('inputModal');
+  const prompt = document.getElementById('inputPrompt');
+  const input = document.getElementById('inputValue');
+  
+  prompt.textContent = pendingInputs[currentInputIndex];
+  const desc = document.getElementById('inputDescription');
+  desc.textContent = pendingInputs[currentInputIndex];
+  input.value = '';
+  modal.classList.add('show');
+  modal.setAttribute('aria-hidden', 'false');
+  input.focus();
+}
+
+document.getElementById('inputSubmit').addEventListener('click', function() {
+  const value = document.getElementById('inputValue').value;
+  collectedInputs.push(value);
+  currentInputIndex++;
+  showInputModal();
+});
+
+document.getElementById('inputCancel').addEventListener('click', function() {
+  // Abort input flow and reset UI
+  pendingInputs = [];
+  collectedInputs = [];
+  currentInputIndex = 0;
+  const modal = document.getElementById('inputModal');
+  modal.classList.remove('show');
+  modal.setAttribute('aria-hidden', 'true');
+  const btn = document.getElementById('runBtn');
+  btn.disabled = false;
+  btn.classList.remove('loading');
+});
+
+document.getElementById('inputValue').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    document.getElementById('inputSubmit').click();
+  }
+});
+</script>
