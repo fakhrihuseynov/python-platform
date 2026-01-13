@@ -6,7 +6,7 @@
       <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.75rem;">
         <h3 class="futuristic-title" style="margin:0; font-size:1rem; flex:1">Docs</h3>
         <input id="newFolderName" placeholder="New folder name" style="padding:0.35rem 0.5rem; border:1px solid var(--border); width:160px;">
-        <button id="createFolderBtn" class="btn" title="Add folder">＋</button>
+        <button id="createFolderBtn" class="btn" title="Add folder" style="width:30px; height:28px; padding:0; font-size:16px;">＋</button>
       </div>
       <div id="foldersList" style="display:flex; flex-direction:column; gap:0.5rem; max-height:70vh; overflow:auto;"></div>
     </div>
@@ -136,6 +136,9 @@ function makeItem(d){
   el.addEventListener('click', (e)=>{
     // if click originated inside action buttons, ignore here
     if (e.target.closest && e.target.closest('.item-actions')) return;
+    // ignore clicks while an inline rename is active to avoid releasing the editor
+    if (el.dataset && el.dataset.renaming === '1') return;
+    if (currentlyRenaming) return;
     e.preventDefault();
     attemptLoadFile(d.id, d.name);
   });
@@ -144,6 +147,9 @@ function makeItem(d){
     if (e.target.closest && e.target.closest('.item-actions')) return;
     e.stopPropagation();
     e.preventDefault();
+    // mark renaming so other click handlers ignore clicks
+    currentlyRenaming = true;
+    el.dataset.renaming = '1';
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
     nameInput.value = a.textContent;
@@ -151,22 +157,57 @@ function makeItem(d){
     nameInput.style.width = '160px';
     el.replaceChild(nameInput, a);
     nameInput.focus();
-    function finishRename(){
+    let finished = false;
+    async function finishRename(){
+      if (finished) return; finished = true;
       const newName = (nameInput.value || '').trim() || 'Untitled';
-      fetch(`/learn/docs/file/${d.id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:newName})})
-        .then(res=>res.json())
-        .then(async (entry)=>{
-          // If this file is currently open, update the title input
-          const currentOpenId = document.getElementById('saveDocBtn').dataset.current;
-          if (currentOpenId === d.id) {
-            document.getElementById('docTitle').value = entry.name;
+      try{
+        const res = await fetch(`/learn/docs/file/${d.id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:newName})});
+        const entry = await res.json();
+        // If this file is currently open, update the title input
+        const currentOpenId = document.getElementById('saveDocBtn').dataset.current;
+        if (currentOpenId === d.id) {
+          document.getElementById('docTitle').value = entry.name;
+        }
+        // Preserve mapping: if this item is inside a folder in the current DOM, ensure mapping keeps it assigned
+        try{
+          const parentFolderEl = el.closest && el.closest('.folder');
+          if (parentFolderEl){
+            const folderTitleEl = parentFolderEl.querySelector && parentFolderEl.querySelector('strong');
+            const folderName = folderTitleEl ? (folderTitleEl.textContent||'').trim() : null;
+            if (folderName){
+              const mapping = loadFolderMapping() || {};
+              mapping[entry.id] = folderName;
+              saveFolderMapping(mapping);
+            }
           }
-          await loadList();
-          // attempt to open the renamed file in UI
-          document.querySelectorAll('#foldersList a').forEach(a2=>{ if (a2.textContent === entry.name) a2.click(); });
-        });
+        }catch(e){}
+        // remember whether this file was open before renaming
+        const wasOpen = (document.getElementById('saveDocBtn').dataset.current === d.id) || (currentDocId === d.id);
+        await loadList();
+        // If the renamed file was open, keep the editor showing that file.
+        if (wasOpen){
+          if (dirty){
+            // Preserve the current unsaved session: update title and mapping, but don't reload content
+            try{ document.getElementById('docTitle').value = entry.name; }catch(e){}
+            document.getElementById('saveDocBtn').dataset.current = entry.id;
+            currentDocId = entry.id;
+            await loadList();
+          } else {
+            // ensure the requested name is preserved if server returns empty
+            lastRequestedName = entry.name;
+            await loadFileById(entry.id);
+          }
+        }
+      }catch(err){
+        console.error('Rename failed', err);
+      }finally{
+        // clear renaming guards once operation completes
+        currentlyRenaming = false;
+        try{ delete el.dataset.renaming; }catch(e){}
+      }
     }
-    nameInput.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter') finishRename(); });
+    nameInput.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter'){ ev.preventDefault(); finishRename(); } });
     nameInput.addEventListener('blur', finishRename);
   });
   el.appendChild(a);
@@ -239,6 +280,10 @@ function createFolderElement(folderName){
   const delBtn = document.createElement('button'); delBtn.className='btn btn-secondary'; delBtn.title='Delete folder';
   // match file-item delete SVG for consistency
   delBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
+  // make action buttons compact
+  [newBtn, renameBtn, delBtn].forEach(b=>{
+    b.style.padding = '4px 6px'; b.style.height = '26px'; b.style.minWidth = '28px'; b.style.fontSize = '12px'; b.style.lineHeight = '1';
+  });
   right.appendChild(newBtn); right.appendChild(renameBtn); right.appendChild(delBtn);
   header.appendChild(left); header.appendChild(right);
   wrap.appendChild(header);
@@ -254,46 +299,91 @@ function createFolderElement(folderName){
     toggle.textContent = isHidden ? '▾' : '▸';
   });
 
-  // new file in folder
+  // If this is the reserved 'Unsorted' folder, hide rename/delete to prevent removal
+  if (folderName === 'Unsorted'){
+    renameBtn.style.display = 'none';
+    delBtn.style.display = 'none';
+    // ensure Unsorted is open by default
+    container.style.display = 'flex';
+    toggle.textContent = '▾';
+  }
+
+  // new file in folder (respect unsaved changes)
   newBtn.addEventListener('click', async ()=>{
-    const res = await fetch('/learn/docs/file', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:'Untitled', content:''})});
-    const ent = await res.json();
-    // assign to folder
-    const mapping = loadFolderMapping(); mapping[ent.id] = folderName; saveFolderMapping(mapping);
-    await loadList();
-    // open created file
-    setTimeout(()=>{ document.querySelectorAll('#foldersList a').forEach(a=>{ if (a.textContent === 'Untitled') a.click(); }); }, 200);
+    async function doCreate(){
+      const res = await fetch('/learn/docs/file', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:'Untitled', content:''})});
+      const ent = await res.json();
+      // assign to folder
+      const mapping = loadFolderMapping(); mapping[ent.id] = folderName; saveFolderMapping(mapping);
+      // ensure list updated then load created file
+      await loadList();
+      await loadFileById(ent.id);
+    }
+    if (dirty){
+      showUnsavedModal(async ()=>{ // save then create
+        try{ await saveCurrentDoc(); }catch(e){}
+        await doCreate();
+      }, async ()=>{ // discard and create
+        dirty = false;
+        await doCreate();
+      }, ()=>{/* cancel */});
+    } else {
+      await doCreate();
+    }
   });
 
   // rename folder (inline). Guard to avoid double-execution from Enter+blur.
   renameBtn.addEventListener('click', ()=>{
+    // mark renaming so other click handlers ignore clicks
+    currentlyRenaming = true;
     const input = document.createElement('input'); input.type='text'; input.value = folderName; input.style.padding='4px'; input.style.width='140px';
     header.replaceChild(input, left);
     input.focus();
     let finished = false;
-    function finish(){
+    async function finish(){
       if (finished) return; finished = true;
-      const newName = (input.value||'').trim() || folderName;
-      const names = loadFolderNames();
-      const idx = names.indexOf(folderName);
-      if (idx !== -1) names[idx] = newName;
-      else if (!names.includes(newName)) names.push(newName);
-      saveFolderNames(names);
-      try{ if (input.parentNode) header.replaceChild(left, input); }catch(e){}
-      loadList();
+      try{
+        const newName = (input.value||'').trim() || folderName;
+        const names = loadFolderNames();
+        const idx = names.indexOf(folderName);
+        if (idx !== -1) names[idx] = newName;
+        else if (!names.includes(newName)) names.push(newName);
+        // Update any existing mapping entries that pointed to the old folder name
+        const mapping = loadFolderMapping();
+        Object.keys(mapping).forEach(fid => { if (mapping[fid] === folderName) mapping[fid] = newName; });
+        saveFolderMapping(mapping);
+        saveFolderNames(names);
+        try{ if (input.parentNode) header.replaceChild(left, input); }catch(e){}
+        await loadList();
+      }catch(err){ console.error('Folder rename failed', err); }
+      finally{ currentlyRenaming = false; }
     }
     input.addEventListener('blur', finish);
     input.addEventListener('keydown', (e)=>{ if (e.key==='Enter'){ e.preventDefault(); finish(); } });
   });
 
-  // delete folder (move files to Unsorted)
-  delBtn.addEventListener('click', ()=>{
-    if (!confirm('Delete folder "'+folderName+'"? Files will move to Unsorted.')) return;
+  // delete folder (delete files inside folder)
+  delBtn.addEventListener('click', async ()=>{
+    if (!confirm('Delete folder "'+folderName+'" and all files inside it? This cannot be undone.')) return;
     const mapping = loadFolderMapping();
-    Object.keys(mapping).forEach(k=>{ if (mapping[k] === folderName) mapping[k] = 'Unsorted'; });
-    saveFolderMapping(mapping);
+    const idsToDelete = Object.keys(mapping).filter(k => mapping[k] === folderName);
+    try{
+      if (idsToDelete.length){
+        // perform deletions in parallel
+        await Promise.all(idsToDelete.map(id => fetch(`/learn/docs/file/${id}`, {method:'DELETE'})));
+      }
+    }catch(err){ console.error('Error deleting files in folder', err); alert('Failed to delete some files'); }
+    // remove mapping entries and folder name
+    const newMap = loadFolderMapping();
+    idsToDelete.forEach(id => { if (newMap[id]) delete newMap[id]; });
+    saveFolderMapping(newMap);
     const names = loadFolderNames().filter(n=>n!==folderName); saveFolderNames(names);
-    loadList();
+    // if any deleted file was currently open, clear editor
+    const current = document.getElementById('saveDocBtn').dataset.current;
+    if (current && idsToDelete.includes(current)){
+      try{ document.getElementById('docTitle').value=''; const docElClear = document.getElementById('docContent'); if (docElClear) docElClear.innerHTML = ''; document.getElementById('saveDocBtn').dataset.current = ''; currentDocId = ''; dirty = false; }catch(e){}
+    }
+    await loadList();
   });
 
   // dragover/drop to accept file moves
@@ -310,15 +400,30 @@ async function loadList(){
   const foldersEl = document.getElementById('foldersList'); foldersEl.innerHTML = '';
   const files = await fetchFiles();
   const mapping = loadFolderMapping();
-  const names = loadFolderNames();
-  // ensure Unsorted always present
-  if (!names.includes('Unsorted')) names.unshift('Unsorted');
+  // Clean up any legacy 'Unsorted' references from mapping so the UI never shows an Unsorted folder
+  let mappingChanged = false;
+  Object.keys(mapping).forEach(k=>{ if (mapping[k] === 'Unsorted'){ delete mapping[k]; mappingChanged = true; } });
+  if (mappingChanged) saveFolderMapping(mapping);
+  let names = loadFolderNames() || [];
+  // remove any legacy 'Unsorted' entry from saved names
+  names = names.filter(n => n !== 'Unsorted');
   // build map folder->files
   const map = {};
   names.forEach(n=> map[n]=[]);
+  const unassigned = [];
   files.forEach(f=>{
-    const folder = mapping[f.id] || 'Unsorted'; if (!map[folder]) map[folder]=[]; map[folder].push(f);
+    const folder = mapping[f.id];
+    if (folder && map[folder]) map[folder].push(f);
+    else unassigned.push(f);
   });
+  // render folders in order
+  // render unassigned files first (no folder header)
+  if (unassigned.length){
+    unassigned.forEach(file=>{
+      const item = makeItem(file);
+      foldersEl.appendChild(item);
+    });
+  }
   // render folders in order
   names.forEach(fn=>{
     const {wrap, container, title} = createFolderElement(fn);
@@ -333,33 +438,92 @@ async function loadList(){
   saveFolderNames(names);
 }
 
-// create folder button handler
-document.getElementById('createFolderBtn').addEventListener('click', ()=>{
-  const nameEl = document.getElementById('newFolderName');
-  const name = (nameEl.value||'').trim() || 'New Folder';
-  const names = loadFolderNames(); if (!names.includes(name)) names.push(name); saveFolderNames(names); nameEl.value=''; loadList();
-});
+// One-time migration to remove legacy 'Unsorted' entries that may linger in localStorage
+function runOneTimeMigration(){
+  try{
+    let changed = false;
+    const namesRaw = localStorage.getItem('docs_folder_names');
+    if (namesRaw){
+      const names = JSON.parse(namesRaw || '[]');
+      if (Array.isArray(names)){
+        const filtered = names.filter(n => n !== 'Unsorted');
+        if (filtered.length !== names.length){
+          localStorage.setItem('docs_folder_names', JSON.stringify(filtered));
+          changed = true;
+        }
+      }
+    }
+    const mappingRaw = localStorage.getItem('docs_folder_mapping');
+    if (mappingRaw){
+      const mapping = JSON.parse(mappingRaw || '{}');
+      Object.keys(mapping).forEach(k=>{ if (mapping[k] === 'Unsorted'){ delete mapping[k]; changed = true; } });
+      if (changed) localStorage.setItem('docs_folder_mapping', JSON.stringify(mapping));
+    }
+  }catch(e){ console.warn('migration cleanup error', e); }
+}
+
+// create folder helper + handlers (robust attach)
+function createFolder(name){
+  name = (name||'').trim() || 'New Folder';
+  const names = loadFolderNames() || [];
+  if (!names.includes(name)) names.push(name);
+  saveFolderNames(names);
+  loadList();
+}
+
+const _createBtn = document.getElementById('createFolderBtn');
+const _newFolderInput = document.getElementById('newFolderName');
+if (_createBtn){
+  _createBtn.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const name = (_newFolderInput && _newFolderInput.value) ? _newFolderInput.value.trim() : 'New Folder';
+    createFolder(name);
+    if (_newFolderInput) { _newFolderInput.value = ''; _newFolderInput.focus(); }
+  });
+}
+if (_newFolderInput){
+  _newFolderInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter'){ e.preventDefault(); if (_createBtn) _createBtn.click(); else createFolder(_newFolderInput.value); } });
+}
 
 document.getElementById('saveDocBtn').addEventListener('click', async ()=>{
-  const id = document.getElementById('saveDocBtn').dataset.current;
+  await saveCurrentDoc();
+});
+
+// Helper to save the current editor content. Returns the saved entry {id,name,...}
+async function saveCurrentDoc(){
+  const btn = document.getElementById('saveDocBtn');
+  const id = btn.dataset.current;
   const name = document.getElementById('docTitle').value || 'Untitled';
   const content = (document.getElementById('docContent') && document.getElementById('docContent').innerHTML) || '';
   if (!id){
-    const res = await fetch('/learn/docs/file', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name, content:content})});
-    const newEntry = await res.json();
-    await loadList();
-    // select new
-    document.getElementById('saveDocBtn').dataset.current = newEntry.id;
-    return;
+    try{
+      const res = await fetch('/learn/docs/file', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name, content:content})});
+      if (!res.ok) throw new Error('Save failed');
+      const newEntry = await res.json();
+      btn.dataset.current = newEntry.id;
+      currentDocId = newEntry.id;
+      await loadList();
+      setCurrentSnapshot();
+      dirty = false;
+      return newEntry;
+    }catch(err){ console.error('Error saving new file', err); alert('Failed to save file'); throw err; }
   }
-  await fetch(`/learn/docs/file/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name, content:content})});
-  await loadList();
-});
+  try{
+    const res = await fetch(`/learn/docs/file/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:name, content:content})});
+    if (!res.ok) throw new Error('Save failed');
+    await loadList();
+    setCurrentSnapshot();
+    dirty = false;
+    return {id, name};
+  }catch(err){ console.error('Error updating file', err); alert('Failed to save file'); throw err; }
+}
 
 // link UI removed per user request
 
 // delete and rename are handled via left-panel controls; editor buttons removed
 
+// run migration once then load list
+runOneTimeMigration();
 loadList();
 
 // Preview: render URLs as clickable links
@@ -478,6 +642,10 @@ function saveSelection(){
     _savedRange = sel.getRangeAt(0).cloneRange();
   }
 }
+// Holds a name that was requested by the user click, to avoid overwriting it
+let lastRequestedName = null;
+// Guard active rename operations to prevent clicks/navigation from releasing editor
+let currentlyRenaming = false;
 function restoreSelection(){
   const sel = window.getSelection();
   sel.removeAllRanges();
@@ -754,13 +922,25 @@ function showUnsavedModal(onSave, onDiscard, onCancel){
 
 // attempt to navigate to a document id, with unsaved-change handling
 async function attemptLoadFile(id, name){
+  // If an inline rename is active, ignore attempts to load other files
+  if (currentlyRenaming) return;
+  // Prefill the editor title immediately when a file is clicked to avoid accidental 'Untitled' saves
+  if (name) {
+    try{ document.getElementById('docTitle').value = name; lastRequestedName = name; }catch(e){}
+  } else {
+    lastRequestedName = null;
+  }
   if (dirty && id !== currentDocId){
     showUnsavedModal(async ()=>{ // save then load
-      await document.getElementById('saveDocBtn').click();
+      // set title to intended name before load so the user doesn't accidentally save as Untitled
+      if (name) try{ document.getElementById('docTitle').value = name; }catch(e){}
+      try{ await saveCurrentDoc(); }catch(e){}
       currentDocId = id;
       loadFileById(id);
     }, ()=>{ // discard and load
       dirty = false;
+      // set title for clarity
+      if (name) try{ document.getElementById('docTitle').value = name; }catch(e){}
       currentDocId = id;
       loadFileById(id);
     }, ()=>{ /* cancel - do nothing */ });
@@ -776,7 +956,14 @@ async function loadFileById(id){
   const data = await res.json();
   // Temporarily disconnect observer to prevent false dirty flags during load
   if (window.docContentObserver) window.docContentObserver.disconnect();
-  document.getElementById('docTitle').value = data.name || '';
+  // If server returned empty name but user had clicked a file name, keep that requested name
+  if ((!data.name || data.name === '') && lastRequestedName && currentDocId === id){
+    document.getElementById('docTitle').value = lastRequestedName;
+  } else {
+    document.getElementById('docTitle').value = data.name || '';
+  }
+  // clear lastRequestedName once we've applied it
+  lastRequestedName = null;
   const docEl = document.getElementById('docContent'); if (docEl) docEl.innerHTML = data.content || '';
   setCurrentSnapshot();
   document.getElementById('saveDocBtn').dataset.current = id;
@@ -790,6 +977,8 @@ async function loadFileById(id){
 
 // wire clicks on left-panel anchors to attemptLoadFile instead of direct load
 document.addEventListener('click', (ev)=>{
+  // Don't navigate while inline rename is active
+  if (currentlyRenaming) return;
   const a = ev.target.closest && ev.target.closest('#foldersList a');
   if (a){
     ev.preventDefault();
@@ -829,7 +1018,7 @@ document.addEventListener('click', (ev)=>{
   if (navLink && dirty){
     ev.preventDefault();
     showUnsavedModal(async ()=>{ // save then navigate
-      await document.getElementById('saveDocBtn').click();
+      try{ await saveCurrentDoc(); }catch(e){}
       dirty = false;
       window.location.href = navLink.href;
     }, ()=>{ // discard and navigate
