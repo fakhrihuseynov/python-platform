@@ -31,3 +31,5 @@ data/*.jsonl
 data/*.yml
 data/*.json
 data/docs/*
+data/docs/**/*
+data/docs/index.json
