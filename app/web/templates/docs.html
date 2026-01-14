@@ -6,7 +6,7 @@
       <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.75rem;">
         <h3 class="futuristic-title" style="margin:0; font-size:1rem; flex:1">Docs</h3>
         <input id="newFolderName" placeholder="New folder name" style="padding:0.35rem 0.5rem; border:1px solid var(--border); width:160px;">
-        <button id="createFolderBtn" class="btn" title="Add folder" style="width:30px; height:28px; padding:0; font-size:16px;">＋</button>
+        <button id="createFolderBtn" class="btn" title="Add folder" style="width:30px; height:28px; margin-top:0%; padding:0; font-size:16px;">＋</button>
       </div>
       <div id="foldersList" style="display:flex; flex-direction:column; gap:0.5rem; max-height:70vh; overflow:auto;"></div>
     </div>
@@ -85,23 +85,36 @@
         </div>
       </div>
       <input id="docTitle" placeholder="Document title" style="width:100%; padding:0.5rem; margin:0.5rem 0 0.75rem 0; border:1px solid var(--border);">
-      <div id="docContent" contenteditable="true" style="width:100%; min-height:20vh; max-height:60vh; padding:1rem; border:1px solid var(--border); overflow:auto; font-family:inherit; white-space:pre-wrap; font-size:14px;"></div>
+      <div id="docContent" contenteditable="true" style="width:100%; min-height:20vh; padding:1rem; border:1px solid var(--border); overflow:hidden; font-family:inherit; white-space:pre-wrap; font-size:14px; box-sizing:border-box;"></div>
       <div id="previewArea" style="display:none; margin-top:0.75rem; padding:1rem; border:1px solid var(--border); background:var(--bg-primary); font-family: 'Udemy Sans', 'Noto Sans JP', 'Vazirmatn', 'SF Pro Text', -apple-system, BlinkMacSystemFont, Roboto, 'Segoe UI', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';"></div>
     </div>
   </section>
 </div>
 
 <style>
-  .doc-item { transition: background 0.12s ease; }
+  .doc-item { transition: background 0.12s ease; padding: 0.25rem 0.4rem; font-size:13px; border-bottom:1px solid var(--border); }
   /* Light-mode hover (default): slightly darker to be visible on light backgrounds */
   .doc-item:hover { background: rgba(0,0,0,0.04); cursor: pointer; }
-  .item-actions { display:inline-flex; gap:6px; align-items:center; opacity:0; transform:translateX(6px); transition:opacity .12s ease, transform .12s ease; }
+  .item-actions { display:inline-flex; gap:4px; align-items:center; opacity:0; transform:translateX(6px); transition:opacity .12s ease, transform .12s ease; }
   .doc-item:hover .item-actions { opacity:1; transform:translateX(0); }
-  .item-actions button { border-radius:4px; padding:4px; }
+  .item-actions button { border-radius:4px; padding:2px; height:24px; min-width:24px; }
   /* Dark-mode override: subtle light hover */
   [data-theme="dark"] .doc-item:hover { background: rgba(255,255,255,0.02); }
   /* Pointer cursor for links in editor */
   #docContent a { cursor: pointer; }
+  /* Selected file highlight */
+  .doc-item.selected { background: rgba(0,123,255,0.08); }
+  /* Slimmer folder header and files padding */
+  .folder > div:first-child { padding: 0.125rem 0 !important; }
+  .folder .folder-files { padding: 0 0 4px 1.1rem !important; gap:4px !important; }
+  /* Allow pre/code inside the editor to wrap and avoid internal scrollbars */
+  #docContent pre, #docContent code, #docContent .code-block {
+    white-space: pre-wrap !important;
+    white-space: -moz-pre-wrap !important;
+    word-break: break-word !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
 </style>
 <script>
 async function fetchFiles(){
@@ -232,7 +245,9 @@ function makeItem(d){
       const docElClear = document.getElementById('docContent'); if (docElClear) docElClear.innerHTML = '';
       document.getElementById('saveDocBtn').dataset.current = '';
     }
-    loadList();
+    await loadList();
+    // clear highlight if deleted item was selected
+    try{ const selId = d.id; const btn = document.getElementById('saveDocBtn'); const cur = btn && btn.dataset && btn.dataset.current; highlightSelectedFile(cur || ''); }catch(e){}
   });
   actions.appendChild(del);
   // rename handled via double-click inline; remove dedicated rename icon
@@ -264,6 +279,37 @@ function loadFolderNames(){
 }
 function saveFolderNames(list){ localStorage.setItem('docs_folder_names', JSON.stringify(list)); }
 
+// Active folder state: only this folder should remain expanded during operations
+let activeFolderName = null;
+
+function collapseAllExcept(name){
+  const folders = document.querySelectorAll('#foldersList .folder');
+  folders.forEach(f => {
+    const titleEl = f.querySelector && f.querySelector('strong');
+    const fname = titleEl ? (titleEl.textContent||'').trim() : null;
+    const container = f.querySelector && f.querySelector('.folder-files');
+    const caret = f.querySelector && f.querySelector('.folder-caret');
+    if (!container || !caret) return;
+    if (name && fname === name){
+      container.style.display = 'flex';
+      caret.textContent = '▾';
+    } else {
+      container.style.display = 'none';
+      caret.textContent = '▸';
+    }
+  });
+}
+
+function highlightSelectedFile(id){
+  try{
+    const list = document.querySelectorAll('#foldersList .doc-item');
+    list.forEach(it => {
+      if (it.dataset && it.dataset.id === id) it.classList.add('selected');
+      else it.classList.remove('selected');
+    });
+  }catch(e){}
+}
+
 function createFolderElement(folderName){
   const wrap = document.createElement('div');
   wrap.className = 'folder';
@@ -271,7 +317,7 @@ function createFolderElement(folderName){
   header.style.display='flex'; header.style.justifyContent='space-between'; header.style.alignItems='center'; header.style.padding='0.25rem 0';
   const left = document.createElement('div'); left.style.display='flex'; left.style.alignItems='center';
   // Use a simple caret span (not a blue button) and make the header pane clickable
-  const toggle = document.createElement('span'); toggle.className='folder-caret'; toggle.textContent = '▾'; toggle.style.marginRight='6px'; toggle.style.userSelect='none'; toggle.style.fontSize='12px';
+  const toggle = document.createElement('span'); toggle.className='folder-caret'; toggle.textContent = '▸'; toggle.style.marginRight='6px'; toggle.style.userSelect='none'; toggle.style.fontSize='12px';
   const title = document.createElement('strong'); title.textContent = folderName; title.style.cursor='pointer';
   left.appendChild(toggle); left.appendChild(title);
   const right = document.createElement('div'); right.style.display='flex'; right.style.gap='6px';
@@ -287,25 +333,31 @@ function createFolderElement(folderName){
   right.appendChild(newBtn); right.appendChild(renameBtn); right.appendChild(delBtn);
   header.appendChild(left); header.appendChild(right);
   wrap.appendChild(header);
-  const container = document.createElement('div'); container.className='folder-files'; container.style.display='flex'; container.style.flexDirection='column'; container.style.gap='4px'; container.style.padding='0 0 6px 2rem';
+  const container = document.createElement('div'); container.className='folder-files'; container.style.display='none'; container.style.flexDirection='column'; container.style.gap='4px'; container.style.padding='0 0 6px 2rem';
   wrap.appendChild(container);
 
   // toggle by clicking the header pane (ignore clicks on action buttons)
   header.addEventListener('click', (e)=>{
     if (right.contains(e.target)) return; // clicking action buttons should not toggle
     const isHidden = container.style.display === 'none';
-    container.style.display = isHidden ? 'flex' : 'none';
-    // caret direction: down for open, right for closed
-    toggle.textContent = isHidden ? '▾' : '▸';
+    if (isHidden){
+      // opening this folder: make it the active one and collapse others
+      activeFolderName = folderName;
+      collapseAllExcept(folderName);
+    } else {
+      // closing: collapse all
+      activeFolderName = null;
+      collapseAllExcept(null);
+    }
   });
 
   // If this is the reserved 'Unsorted' folder, hide rename/delete to prevent removal
   if (folderName === 'Unsorted'){
     renameBtn.style.display = 'none';
     delBtn.style.display = 'none';
-    // ensure Unsorted is open by default
-    container.style.display = 'flex';
-    toggle.textContent = '▾';
+    // Unsorted should not be forced open; keep default collapsed
+    container.style.display = 'none';
+    toggle.textContent = '▸';
   }
 
   // new file in folder (respect unsaved changes)
@@ -315,6 +367,8 @@ function createFolderElement(folderName){
       const ent = await res.json();
       // assign to folder
       const mapping = loadFolderMapping(); mapping[ent.id] = folderName; saveFolderMapping(mapping);
+      // make this folder active so it's the only one expanded after reload
+      activeFolderName = folderName;
       // ensure list updated then load created file
       await loadList();
       await loadFileById(ent.id);
@@ -354,6 +408,8 @@ function createFolderElement(folderName){
         saveFolderMapping(mapping);
         saveFolderNames(names);
         try{ if (input.parentNode) header.replaceChild(left, input); }catch(e){}
+        // ensure the renamed folder becomes the active (expanded) folder
+        activeFolderName = newName;
         await loadList();
       }catch(err){ console.error('Folder rename failed', err); }
       finally{ currentlyRenaming = false; }
@@ -378,6 +434,8 @@ function createFolderElement(folderName){
     idsToDelete.forEach(id => { if (newMap[id]) delete newMap[id]; });
     saveFolderMapping(newMap);
     const names = loadFolderNames().filter(n=>n!==folderName); saveFolderNames(names);
+    // after deletion, collapse all (deleted folder no longer exists)
+    activeFolderName = null;
     // if any deleted file was currently open, clear editor
     const current = document.getElementById('saveDocBtn').dataset.current;
     if (current && idsToDelete.includes(current)){
@@ -390,7 +448,9 @@ function createFolderElement(folderName){
   container.addEventListener('dragover', (ev)=>{ ev.preventDefault(); ev.dataTransfer.dropEffect='move'; });
   container.addEventListener('drop', (ev)=>{
     ev.preventDefault(); const fid = ev.dataTransfer.getData('text/plain'); if (!fid) return;
-    const mapping = loadFolderMapping(); mapping[fid] = folderName; saveFolderMapping(mapping); loadList();
+    const mapping = loadFolderMapping(); mapping[fid] = folderName; saveFolderMapping(mapping);
+    activeFolderName = folderName;
+    loadList();
   });
 
   return {wrap, container, title};
@@ -436,6 +496,10 @@ async function loadList(){
   });
   // store folder names in case new ones added
   saveFolderNames(names);
+  // enforce that only the active folder (if any) remains expanded
+  try{ collapseAllExcept(activeFolderName); }catch(e){}
+  // highlight currently open file in the list
+  try{ const cur = document.getElementById('saveDocBtn') && document.getElementById('saveDocBtn').dataset && document.getElementById('saveDocBtn').dataset.current; if (cur) highlightSelectedFile(cur); }catch(e){}
 }
 
 // One-time migration to remove legacy 'Unsorted' entries that may linger in localStorage
@@ -468,6 +532,8 @@ function createFolder(name){
   const names = loadFolderNames() || [];
   if (!names.includes(name)) names.push(name);
   saveFolderNames(names);
+  // expand the new folder after creating
+  activeFolderName = name;
   loadList();
 }
 
@@ -503,6 +569,8 @@ async function saveCurrentDoc(){
       btn.dataset.current = newEntry.id;
       currentDocId = newEntry.id;
       await loadList();
+      // ensure highlight for the newly created file
+      try{ highlightSelectedFile(newEntry.id); }catch(e){}
       setCurrentSnapshot();
       dirty = false;
       return newEntry;
@@ -546,12 +614,32 @@ document.getElementById('previewBtn').addEventListener('click', ()=>{
 // Auto-resize helper: expands textarea height to fit content on input/paste/load
 function autoResize(el){
   if (!el) return;
+  // Reset to natural height and measure. Use a safe offscreen clone to account for children
   el.style.height = 'auto';
-  let desired = el.scrollHeight;
   const rect = el.getBoundingClientRect();
-  const maxAvailable = window.innerHeight - rect.top - 40; // keep some bottom padding
-  if (maxAvailable > 120) desired = Math.min(desired, maxAvailable);
-  el.style.height = desired + 'px';
+  let desired = el.scrollHeight || el.offsetHeight || 0;
+  try{
+    const clone = el.cloneNode(true);
+    clone.style.width = Math.max(50, el.clientWidth) + 'px';
+    clone.style.position = 'absolute';
+    clone.style.left = '-9999px';
+    clone.style.top = '0';
+    clone.style.visibility = 'hidden';
+    clone.style.height = 'auto';
+    clone.style.overflow = 'visible';
+    document.body.appendChild(clone);
+    const measured = clone.scrollHeight || clone.offsetHeight || 0;
+    if (measured > desired) desired = measured;
+    document.body.removeChild(clone);
+  }catch(e){}
+  const maxAvailable = Math.max(120, window.innerHeight - rect.top - 40); // minimum sensible cap
+  if (desired > maxAvailable){
+    el.style.height = maxAvailable + 'px';
+    el.style.overflow = 'auto';
+  } else {
+    el.style.height = desired + 'px';
+    el.style.overflow = 'hidden';
+  }
 }
 
 const docEl = document.getElementById('docContent');
@@ -936,17 +1024,21 @@ async function attemptLoadFile(id, name){
       if (name) try{ document.getElementById('docTitle').value = name; }catch(e){}
       try{ await saveCurrentDoc(); }catch(e){}
       currentDocId = id;
+      // expand folder containing this file (if any)
+      try{ const mapping = loadFolderMapping(); activeFolderName = mapping[id] || null; collapseAllExcept(activeFolderName); }catch(e){}
       loadFileById(id);
     }, ()=>{ // discard and load
       dirty = false;
       // set title for clarity
       if (name) try{ document.getElementById('docTitle').value = name; }catch(e){}
       currentDocId = id;
+      try{ const mapping = loadFolderMapping(); activeFolderName = mapping[id] || null; collapseAllExcept(activeFolderName); }catch(e){}
       loadFileById(id);
     }, ()=>{ /* cancel - do nothing */ });
     return;
   }
   currentDocId = id;
+  try{ const mapping = loadFolderMapping(); activeFolderName = mapping[id] || null; collapseAllExcept(activeFolderName); }catch(e){}
   await loadFileById(id);
 }
 
@@ -965,8 +1057,11 @@ async function loadFileById(id){
   // clear lastRequestedName once we've applied it
   lastRequestedName = null;
   const docEl = document.getElementById('docContent'); if (docEl) docEl.innerHTML = data.content || '';
+  try{ autoResize(docEl); }catch(e){}
   setCurrentSnapshot();
   document.getElementById('saveDocBtn').dataset.current = id;
+  // highlight the selected file in the list
+  try{ highlightSelectedFile(id); }catch(e){}
   // Reconnect observer after load completes
   setTimeout(()=>{
     if (window.docContentObserver && docEl){
