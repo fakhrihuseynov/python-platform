@@ -22,7 +22,7 @@ A minimal, local-first web app to help beginners learn Python via micro-lessons,
 
 ## 🗂 Project Structure
 
-```
+```bash
 python-platform/
 ├── app/
 │   ├── __init__.py           # Exports create_app
@@ -72,6 +72,7 @@ python init_data.py
 ```
 
 This creates:
+
 - `data/cards.jsonl` - Seed flashcards
 - `data/learning_log.yml` - Learning log
 - `data/progress.json` - Progress tracking
@@ -101,10 +102,20 @@ ollama serve
 ### 6. Run the Application
 
 ```bash
-flask --app app.web.main run --debug
+./start.sh
 ```
 
-Visit: **http://127.0.0.1:5000**
+Visit: **```http://127.0.0.1:5000```**
+
+Alternatively, run the Flask command directly without the script:
+
+```bash
+# from repo root
+export PYTHONPATH=$(pwd)
+export FLASK_APP=app.web.main
+export FLASK_ENV=development
+flask run --host=127.0.0.1 --port=5000
+```
 
 ## 🧪 Testing
 
@@ -117,10 +128,13 @@ python tests/test_flashcards.py
 ## 📖 Usage Guide
 
 ### Home Page
+
 Welcome page with navigation to all features.
 
 ### Learn (`/learn`)
+
 Browse micro-lessons covering:
+
 - Variables & Types
 - Lists & Methods
 - Functions & Return
@@ -128,27 +142,35 @@ Browse micro-lessons covering:
 Each lesson includes example code and a practice challenge.
 
 ### Practice (`/practice`)
+
 Write and execute Python code in the browser. Get instant feedback on errors or output.
 
 ### Flashcards (`/flashcards`)
+
 Review due flashcards using spaced repetition. Grade each card (1-5) to schedule the next review:
+
 - **1-2**: Again soon
 - **3**: Good (moderate interval)
 - **4-5**: Easy (longer interval)
 
 ### Coach (`/coach`)
+
 Ask Python questions to the local Ollama AI. If Ollama is not running, you'll see a friendly error message.
 
 ## 📂 Data Files
 
 ### `data/cards.jsonl`
+
 One JSON object per line:
+
 ```json
 {"id":"card-abc123", "topic":"lists", "front":"What does list.append(x) do?", "back":"Adds x to the end of the list.", "tags":["lists","methods"], "difficulty":1, "ease_factor":2.5, "interval_days":1, "next_review_at":"2026-01-10"}
 ```
 
 ### `data/learning_log.yml`
+
 YAML list of learning entries:
+
 ```yaml
 - date: '2026-01-10'
   topic: variables
@@ -159,7 +181,9 @@ YAML list of learning entries:
 ```
 
 ### `data/progress.json`
+
 Simple progress counters:
+
 ```json
 {"streak": 0, "lessons_completed": 0}
 ```
@@ -167,11 +191,13 @@ Simple progress counters:
 ## 🛠 Development
 
 ### Code Style
+
 - PEP 8 compliant
 - Type hints where reasonable
 - Docstrings for public functions
 
 ### Architecture
+
 - **Web layer**: `app/web` - Flask routes and templates
 - **Business logic**: `core` - Reusable modules
 - **Storage**: `data` - Local-first YAML/JSONL files
