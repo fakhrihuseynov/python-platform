@@ -125,6 +125,37 @@ def _ensure_unique_slug(slug: str, exclude: str = None) -> str:
         slug = f"{base}-{i}"
         i += 1
     return slug
+
+
+def _folders_path():
+    return os.path.join(BASE, 'folders.json')
+
+
+def load_folders():
+    """Return a tuple (mapping, names) where mapping is dict fileId->folderName and names is list."""
+    ensure_dir()
+    p = _folders_path()
+    if not os.path.exists(p):
+        return {}, []
+    try:
+        with open(p, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        mapping = data.get('mapping', {}) if isinstance(data, dict) else {}
+        names = data.get('names', []) if isinstance(data, dict) else []
+        return mapping, names
+    except Exception:
+        return {}, []
+
+
+def save_folders(mapping: dict, names: list):
+    ensure_dir()
+    p = _folders_path()
+    try:
+        with open(p, 'w', encoding='utf-8') as f:
+            json.dump({'mapping': mapping or {}, 'names': names or []}, f)
+        return True
+    except Exception:
+        return False
 import os
 import json
 import uuid

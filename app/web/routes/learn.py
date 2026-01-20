@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from core.lessons import get_lessons
-from core.docs import list_docs, read_doc, create_doc, update_doc, delete_doc
+from core.docs import list_docs, read_doc, create_doc, update_doc, delete_doc, load_folders, save_folders
 
 bp = Blueprint("learn", __name__)
 
@@ -19,6 +19,19 @@ def docs_index():
 @bp.route('/docs/files', methods=['GET'])
 def docs_files():
     return jsonify(list_docs())
+
+
+@bp.route('/docs/folders', methods=['GET', 'POST'])
+def docs_folders():
+    if request.method == 'GET':
+        mapping, names = load_folders()
+        return jsonify({'mapping': mapping, 'names': names})
+    else:
+        data = request.get_json() or {}
+        mapping = data.get('mapping', {})
+        names = data.get('names', [])
+        ok = save_folders(mapping, names)
+        return jsonify({'ok': bool(ok)})
 
 
 @bp.route('/docs/file', methods=['POST'])

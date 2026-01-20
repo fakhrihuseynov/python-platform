@@ -115,6 +115,9 @@
     overflow: visible !important;
     max-height: none !important;
   }
+  /* Highlight folder when a draggable item is over it */
+  .folder.drag-over > div:first-child { background: rgba(0,123,255,0.06); }
+  .doc-item.dragging { opacity: 0.6; }
 </style>
 <script>
 async function fetchFiles(){
@@ -144,7 +147,19 @@ function makeItem(d){
   el.addEventListener('dragstart', (ev)=>{
     ev.dataTransfer.setData('text/plain', d.id);
     ev.dataTransfer.effectAllowed = 'move';
+    // visual cue for dragging
+    try{ el.classList.add('dragging'); }catch(e){}
+    try{
+      // use a lightweight ghost image if supported
+      const ghost = el.cloneNode(true);
+      ghost.style.position='absolute'; ghost.style.top='-9999px'; ghost.style.left='-9999px'; ghost.style.width = el.offsetWidth + 'px';
+      document.body.appendChild(ghost);
+      try{ ev.dataTransfer.setDragImage(ghost, 10, 10); }catch(e){}
+      setTimeout(()=>{ try{ document.body.removeChild(ghost); }catch(e){} }, 0);
+    }catch(e){}
+    try{ console.debug('dragstart:', d.id); }catch(e){}
   });
+  el.addEventListener('dragend', ()=>{ try{ el.classList.remove('dragging'); }catch(e){} });
   // allow clicking anywhere on the row (except action buttons) to select the file
   el.addEventListener('click', (e)=>{
     // if click originated inside action buttons, ignore here
@@ -273,11 +288,19 @@ function makeItem(d){
 function loadFolderMapping(){
   try{ return JSON.parse(localStorage.getItem('docs_folder_mapping')||'{}'); }catch(e){ return {}; }
 }
-function saveFolderMapping(map){ localStorage.setItem('docs_folder_mapping', JSON.stringify(map)); }
+function saveFolderMapping(map){
+  try{ localStorage.setItem('docs_folder_mapping', JSON.stringify(map)); }catch(e){}
+  // persist to server asynchronously
+  try{ fetch('/learn/docs/folders', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({mapping:map, names: JSON.parse(localStorage.getItem('docs_folder_names')||'[]')})}).catch(()=>{}); }catch(e){}
+}
 function loadFolderNames(){
   try{ return JSON.parse(localStorage.getItem('docs_folder_names')||'[]'); }catch(e){ return []; }
 }
-function saveFolderNames(list){ localStorage.setItem('docs_folder_names', JSON.stringify(list)); }
+function saveFolderNames(list){
+  try{ localStorage.setItem('docs_folder_names', JSON.stringify(list)); }catch(e){}
+  // persist to server asynchronously
+  try{ fetch('/learn/docs/folders', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({mapping: JSON.parse(localStorage.getItem('docs_folder_mapping')||'{}'), names:list})}).catch(()=>{}); }catch(e){}
+}
 
 // Active folder state: only this folder should remain expanded during operations
 let activeFolderName = null;
@@ -315,6 +338,8 @@ function createFolderElement(folderName){
   wrap.className = 'folder';
   const header = document.createElement('div');
   header.style.display='flex'; header.style.justifyContent='space-between'; header.style.alignItems='center'; header.style.padding='0.25rem 0';
+  // make header easier to drop onto even when folder is collapsed
+  header.style.minHeight = '34px';
   const left = document.createElement('div'); left.style.display='flex'; left.style.alignItems='center';
   // Use a simple caret span (not a blue button) and make the header pane clickable
   const toggle = document.createElement('span'); toggle.className='folder-caret'; toggle.textContent = '▸'; toggle.style.marginRight='6px'; toggle.style.userSelect='none'; toggle.style.fontSize='12px';
@@ -445,9 +470,33 @@ function createFolderElement(folderName){
   });
 
   // dragover/drop to accept file moves
-  container.addEventListener('dragover', (ev)=>{ ev.preventDefault(); ev.dataTransfer.dropEffect='move'; });
+  container.addEventListener('dragover', (ev)=>{ ev.preventDefault(); ev.dataTransfer.dropEffect='move'; try{ console.debug('container dragover for', folderName); }catch(e){} });
   container.addEventListener('drop', (ev)=>{
-    ev.preventDefault(); const fid = ev.dataTransfer.getData('text/plain'); if (!fid) return;
+    ev.preventDefault(); const fid = ev.dataTransfer.getData('text/plain'); try{ console.debug('container drop:', folderName, 'fid=', fid); }catch(e){}
+    if (!fid) return;
+    const mapping = loadFolderMapping(); mapping[fid] = folderName; saveFolderMapping(mapping);
+    activeFolderName = folderName;
+    loadList();
+  });
+  // header should accept drops too (drop on folder title to move)
+  header.addEventListener('dragover', (ev)=>{ ev.preventDefault(); ev.dataTransfer.dropEffect='move'; wrap.classList.add('drag-over'); try{ console.debug('header dragover for', folderName); }catch(e){} });
+  header.addEventListener('dragleave', (ev)=>{ wrap.classList.remove('drag-over'); try{ console.debug('header dragleave for', folderName); }catch(e){} });
+  header.addEventListener('drop', (ev)=>{
+    ev.preventDefault(); wrap.classList.remove('drag-over'); const fid = ev.dataTransfer.getData('text/plain'); try{ console.debug('header drop:', folderName, 'fid=', fid); }catch(e){}
+    if (!fid) return;
+    const mapping = loadFolderMapping(); mapping[fid] = folderName; saveFolderMapping(mapping);
+    activeFolderName = folderName;
+    loadList();
+  });
+  // also highlight entire folder on dragenter/leave for better affordance
+  wrap.addEventListener('dragenter', ()=>{ wrap.classList.add('drag-over'); try{ console.debug('folder dragenter', folderName); }catch(e){} });
+  wrap.addEventListener('dragleave', ()=>{ wrap.classList.remove('drag-over'); try{ console.debug('folder dragleave', folderName); }catch(e){} });
+  // accept drops on the whole folder wrapper (works when collapsed)
+  wrap.addEventListener('dragover', (ev)=>{ ev.preventDefault(); ev.dataTransfer.dropEffect='move'; wrap.classList.add('drag-over'); try{ console.debug('wrap dragover for', folderName); }catch(e){} });
+  wrap.addEventListener('drop', (ev)=>{
+    ev.preventDefault(); ev.stopPropagation(); wrap.classList.remove('drag-over');
+    const fid = ev.dataTransfer.getData('text/plain'); try{ console.debug('wrap drop:', folderName, 'fid=', fid); }catch(e){}
+    if (!fid) return;
     const mapping = loadFolderMapping(); mapping[fid] = folderName; saveFolderMapping(mapping);
     activeFolderName = folderName;
     loadList();
@@ -458,6 +507,16 @@ function createFolderElement(folderName){
 
 async function loadList(){
   const foldersEl = document.getElementById('foldersList'); foldersEl.innerHTML = '';
+  // Attempt to fetch persistent folder mapping from server; if available, overwrite localStorage
+  try{
+    const fm = await fetch('/learn/docs/folders');
+    if (fm && fm.ok){
+      const data = await fm.json();
+      if (data && data.mapping) try{ localStorage.setItem('docs_folder_mapping', JSON.stringify(data.mapping)); }catch(e){}
+      if (data && data.names) try{ localStorage.setItem('docs_folder_names', JSON.stringify(data.names)); }catch(e){}
+    }
+  }catch(e){ /* ignore if server not reachable */ }
+
   const files = await fetchFiles();
   const mapping = loadFolderMapping();
   // Clean up any legacy 'Unsorted' references from mapping so the UI never shows an Unsorted folder
