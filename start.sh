@@ -19,4 +19,4 @@ export FLASK_APP=app.web.main
 export FLASK_ENV=development
 
 echo "Starting webapp (FLASK_APP=$FLASK_APP) on http://127.0.0.1:5000"
-flask run --host=127.0.0.1 --port=5000
+flask run --host=127.0.0.1 --port=5001
