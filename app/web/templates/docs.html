@@ -290,16 +290,24 @@ function loadFolderMapping(){
 }
 function saveFolderMapping(map){
   try{ localStorage.setItem('docs_folder_mapping', JSON.stringify(map)); }catch(e){}
-  // persist to server asynchronously
-  try{ fetch('/learn/docs/folders', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({mapping:map, names: JSON.parse(localStorage.getItem('docs_folder_names')||'[]')})}).catch(()=>{}); }catch(e){}
+  // persist to server asynchronously and log if it fails
+  try{
+    fetch('/learn/docs/folders', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({mapping:map, names: JSON.parse(localStorage.getItem('docs_folder_names')||'[]')})})
+      .then(r=>{ if (!r.ok) console.warn('Failed to persist folder mapping to server', r.status); })
+      .catch(err=>{ console.warn('Error persisting folder mapping', err); });
+  }catch(e){ console.warn('Error initiating persist', e); }
 }
 function loadFolderNames(){
   try{ return JSON.parse(localStorage.getItem('docs_folder_names')||'[]'); }catch(e){ return []; }
 }
 function saveFolderNames(list){
   try{ localStorage.setItem('docs_folder_names', JSON.stringify(list)); }catch(e){}
-  // persist to server asynchronously
-  try{ fetch('/learn/docs/folders', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({mapping: JSON.parse(localStorage.getItem('docs_folder_mapping')||'{}'), names:list})}).catch(()=>{}); }catch(e){}
+  // persist to server asynchronously and log if it fails
+  try{
+    fetch('/learn/docs/folders', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({mapping: JSON.parse(localStorage.getItem('docs_folder_mapping')||'{}'), names:list})})
+      .then(r=>{ if (!r.ok) console.warn('Failed to persist folder names to server', r.status); })
+      .catch(err=>{ console.warn('Error persisting folder names', err); });
+  }catch(e){ console.warn('Error initiating persist', e); }
 }
 
 // Active folder state: only this folder should remain expanded during operations
@@ -512,8 +520,13 @@ async function loadList(){
     const fm = await fetch('/learn/docs/folders');
     if (fm && fm.ok){
       const data = await fm.json();
-      if (data && data.mapping) try{ localStorage.setItem('docs_folder_mapping', JSON.stringify(data.mapping)); }catch(e){}
-      if (data && data.names) try{ localStorage.setItem('docs_folder_names', JSON.stringify(data.names)); }catch(e){}
+      // Only apply server mapping if it's non-empty to avoid clobbering a local-only session
+      if (data && data.mapping && Object.keys(data.mapping).length > 0){
+        try{ localStorage.setItem('docs_folder_mapping', JSON.stringify(data.mapping)); }catch(e){}
+      }
+      if (data && Array.isArray(data.names) && data.names.length > 0){
+        try{ localStorage.setItem('docs_folder_names', JSON.stringify(data.names)); }catch(e){}
+      }
     }
   }catch(e){ /* ignore if server not reachable */ }
 
@@ -653,22 +666,7 @@ async function saveCurrentDoc(){
 runOneTimeMigration();
 loadList();
 
-// Preview: render URLs as clickable links
-document.getElementById('previewBtn').addEventListener('click', ()=>{
-  const preview = document.getElementById('previewArea');
-  const docEl = document.getElementById('docContent');
-  const content = docEl ? docEl.innerHTML : '';
-  if (preview.style.display === 'none' || preview.style.display === ''){
-    preview.innerHTML = sanitizePreviewHtml(content);
-    preview.style.display = 'block';
-    if (docEl) docEl.style.display = 'none';
-    document.getElementById('previewBtn').textContent = 'Edit';
-  } else {
-    preview.style.display = 'none';
-    if (docEl) docEl.style.display = '';
-    document.getElementById('previewBtn').textContent = 'Preview';
-  }
-});
+// Preview handler is declared later to avoid duplicate listeners
 
 // Auto-resize helper: expands textarea height to fit content on input/paste/load
 function autoResize(el){
